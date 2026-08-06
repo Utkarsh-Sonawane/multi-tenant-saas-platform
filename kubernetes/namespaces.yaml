@@ -1,0 +1,34 @@
+# ============================================================
+# namespaces.yaml — Kubernetes namespaces for all three tenants
+# Apply: kubectl apply -f kubernetes/namespaces.yaml
+# ============================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-a
+  labels:
+    app.kubernetes.io/managed-by: kubectl
+    platform: multi-tenant-saas
+    tenant: tenant-a
+    environment: production
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-b
+  labels:
+    app.kubernetes.io/managed-by: kubectl
+    platform: multi-tenant-saas
+    tenant: tenant-b
+    environment: production
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tenant-c
+  labels:
+    app.kubernetes.io/managed-by: kubectl
+    platform: multi-tenant-saas
+    tenant: tenant-c
+    environment: production

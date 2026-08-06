@@ -1,0 +1,182 @@
+{% extends "dashboard.html" %}
+
+{% block title %}{{ module_name }} — {{ tenant.company_name }}{% endblock %}
+{% block page_title %}{{ module_name }}{% endblock %}
+
+{% block content %}
+<!-- Page header -->
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h1 class="page-heading mb-1">{{ module_name }}</h1>
+    <p class="text-muted small mb-0">{{ tenant.company_name }} · {{ "{:,}".format(table_data.total) }} total records</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-sm btn-outline-tenant" onclick="exportCSV()">
+      <i class="bi bi-download me-1"></i>Export CSV
+    </button>
+    <button class="btn btn-sm btn-tenant" onclick="showToast('{{ module_name }} refreshed!', 'success')">
+      <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+    </button>
+  </div>
+</div>
+
+<!-- Filters & Search -->
+<div class="card-glass mb-3">
+  <div class="card-glass-body py-3">
+    <div class="row g-2 align-items-center">
+      <div class="col-12 col-md-6 col-lg-5">
+        <div class="input-group">
+          <span class="input-group-text bg-transparent border-end-0">
+            <i class="bi bi-search text-muted"></i>
+          </span>
+          <input type="text" id="table-search" class="form-control border-start-0"
+                 placeholder="Search {{ module_name | lower }}…"
+                 value="{{ search }}"
+                 oninput="debounceAjaxSearch(this.value)" />
+        </div>
+      </div>
+      <div class="col-auto ms-auto">
+        <span class="small text-muted">
+          Showing {{ offset + 1 }}–{{ [offset + limit, table_data.total] | min }}
+          of {{ "{:,}".format(table_data.total) }}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Data Table -->
+<div class="card-glass">
+  <div class="card-glass-body p-0">
+    <div class="table-responsive" id="ajax-table-wrapper">
+      {% include "_data_table.html" ignore missing %}
+      {% if table_data and table_data.rows %}
+      <table class="table saas-table mb-0" id="module-table">
+        <thead>
+          <tr>
+            {% for col in table_data.columns %}
+            <th class="sortable" data-col="{{ col }}" onclick="sortTable(this)">
+              {{ col | replace('_', ' ') | title }}
+              <i class="bi bi-chevron-expand ms-1 text-muted small"></i>
+            </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          {% for row in table_data.rows %}
+          <tr class="table-row-animate">
+            {% for col in table_data.columns %}
+            <td>
+              {% set val = row[col] %}
+              {% if col in ('status', 'order_status') %}
+                <span class="status-pill status-{{ val }}">{{ val }}</span>
+              {% elif col in ('price', 'total_price') %}
+                <span class="fw-medium">₹{{ "{:,.2f}".format(val | float) }}</span>
+              {% elif col in ('experience_yrs', 'stock_qty', 'quantity') %}
+                <span class="badge bg-secondary-subtle text-secondary">{{ val }}</span>
+              {% else %}
+                {{ val if val is not none else '—' }}
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
+        <p class="mb-0">No records found{% if search %} for "<strong>{{ search }}</strong>"{% endif %}.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Pagination footer -->
+  <div class="card-glass-footer px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2">
+      <label class="small text-muted mb-0">Rows per page:</label>
+      <select class="form-select form-select-sm" style="width:auto" onchange="changePageSize(this.value)">
+        <option value="10"  {% if limit == 10  %}selected{% endif %}>10</option>
+        <option value="25"  {% if limit == 25  %}selected{% endif %}>25</option>
+        <option value="50"  {% if limit == 50  %}selected{% endif %}>50</option>
+        <option value="100" {% if limit == 100 %}selected{% endif %}>100</option>
+      </select>
+    </div>
+    <nav>
+      <ul class="pagination pagination-sm mb-0">
+        {% set total_pages = ((table_data.total - 1) // limit + 1) if table_data.total else 1 %}
+        {% set current_page = (offset // limit) + 1 %}
+        <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+          <a class="page-link" href="?limit={{ limit }}&offset={{ [offset - limit, 0] | max }}&search={{ search }}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% for p in range([current_page - 2, 1] | max, [current_page + 3, total_pages + 1] | min) %}
+        <li class="page-item {% if p == current_page %}active{% endif %}">
+          <a class="page-link" href="?limit={{ limit }}&offset={{ (p - 1) * limit }}&search={{ search }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+        <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
+          <a class="page-link" href="?limit={{ limit }}&offset={{ offset + limit }}&search={{ search }}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+</div><!-- /.card-glass -->
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  window.TENANT     = { id: "{{ tenant_id }}", color: "{{ tenant.theme_color }}", modules: {{ modules | tojson }} };
+  window.MODULE     = "{{ module_name }}";
+  window.PAGE_LIMIT = {{ limit }};
+  window.PAGE_OFFSET= {{ offset }};
+  window.SEARCH_VAL = "{{ search }}";
+
+  function debounceAjaxSearch(val) {
+    clearTimeout(window._searchTimer);
+    window._searchTimer = setTimeout(() => {
+      window.location.href = '?limit={{ limit }}&offset=0&search=' + encodeURIComponent(val);
+    }, 400);
+  }
+
+  function changePageSize(size) {
+    window.location.href = '?limit=' + size + '&offset=0&search={{ search }}';
+  }
+
+  function sortTable(th) {
+    const table = document.getElementById('module-table');
+    const tbody = table.querySelector('tbody');
+    const idx   = th.cellIndex;
+    const asc   = th.dataset.sort !== 'asc';
+    th.dataset.sort = asc ? 'asc' : 'desc';
+    const rows  = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort((a, b) => {
+      const av = a.cells[idx].textContent.trim();
+      const bv = b.cells[idx].textContent.trim();
+      return asc ? av.localeCompare(bv, undefined, {numeric:true})
+                 : bv.localeCompare(av, undefined, {numeric:true});
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  }
+
+  function exportCSV() {
+    const table = document.getElementById('module-table');
+    if (!table) return;
+    let csv = '';
+    for (const row of table.rows) {
+      csv += Array.from(row.cells).map(c => '"' + c.textContent.trim() + '"').join(',') + '\n';
+    }
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '{{ module_name | lower }}_export.csv';
+    a.click();
+    showToast('CSV downloaded!', 'success');
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,103 @@
+# ============================================================
+# ingress-alb.yaml — AWS ALB Ingress for Multi-Tenant SaaS
+#
+# Prerequisites:
+#   1. AWS Load Balancer Controller installed in the EKS cluster
+#   2. An IAM OIDC provider associated with the cluster
+#   3. A valid ACM certificate for your domain (replace ARN below)
+#
+# Apply: kubectl apply -f kubernetes/ingress-alb.yaml
+#
+# This creates ONE Application Load Balancer with path-based
+# routing to three separate tenant namespaces & services.
+# ============================================================
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: multi-tenant-saas-ingress
+  namespace: tenant-a        # ALB controller resolves cross-ns via annotations
+  labels:
+    app: multi-tenant-saas
+  annotations:
+    # ── ALB Controller ──────────────────────────────────────
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+
+    # ── SSL / HTTPS ─────────────────────────────────────────
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    # Replace with your ACM certificate ARN:
+    alb.ingress.kubernetes.io/certificate-arn: >-
+      arn:aws:acm:ap-south-1:YOUR_ACCOUNT_ID:certificate/YOUR_CERT_ID
+
+    # ── Health check ────────────────────────────────────────
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds:  "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count:      "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count:    "3"
+
+    # ── Load balancer attributes ─────────────────────────────
+    alb.ingress.kubernetes.io/load-balancer-attributes: >-
+      idle_timeout.timeout_seconds=60,
+      routing.http2.enabled=true,
+      access_logs.s3.enabled=false
+
+    # ── Stickiness (optional) ────────────────────────────────
+    alb.ingress.kubernetes.io/target-group-attributes: >-
+      stickiness.enabled=false,deregistration_delay.timeout_seconds=30
+
+    # ── Tags ─────────────────────────────────────────────────
+    alb.ingress.kubernetes.io/tags: >-
+      Environment=production,
+      Project=multi-tenant-saas,
+      ManagedBy=kubectl
+
+    # ── WAF (optional — replace with your WAF ACL ARN) ───────
+    # alb.ingress.kubernetes.io/wafv2-acl-arn: >-
+    #   arn:aws:wafv2:ap-south-1:YOUR_ACCOUNT_ID:regional/webacl/YOUR_WEBACL_ID
+
+spec:
+  rules:
+    # ── Replace 'app.example.com' with your actual domain ───
+    - host: app.example.com
+      http:
+        paths:
+
+          # ── Tenant A — ABC Retail ─────────────────────────
+          - path: /tenant-a
+            pathType: Prefix
+            backend:
+              service:
+                name: tenant-a-service
+                port:
+                  number: 80
+
+          # ── Tenant B — XYZ Hospital ───────────────────────
+          - path: /tenant-b
+            pathType: Prefix
+            backend:
+              service:
+                name: tenant-b-service
+                port:
+                  number: 80
+
+          # ── Tenant C — PQR School ─────────────────────────
+          - path: /tenant-c
+            pathType: Prefix
+            backend:
+              service:
+                name: tenant-c-service
+                port:
+                  number: 80
+
+          # ── Fallback: Login page ──────────────────────────
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tenant-a-service    # Login is served by any replica
+                port:
+                  number: 80

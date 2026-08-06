@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — {{ tenant.company_name }}{% endblock %}
+
+{% block app_shell %}
+<div class="saas-layout">
+
+  {# ══════════════════ SIDEBAR ══════════════════════════════════ #}
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Brand -->
+    <div class="sidebar-brand px-4 py-3 d-flex align-items-center gap-2">
+      <div class="brand-dot" style="background:var(--tenant-primary)"></div>
+      <span class="sidebar-logo-text fw-bold">SaaS<span class="text-tenant">Platform</span></span>
+    </div>
+
+    <!-- Tenant info pill -->
+    <div class="sidebar-tenant-pill mx-3 mb-3 p-2 rounded-3 d-flex align-items-center gap-2">
+      <div class="tenant-avatar" style="background:var(--tenant-primary)20;border:1.5px solid var(--tenant-primary)50">
+        <i class="bi bi-building" style="color:var(--tenant-primary)"></i>
+      </div>
+      <div class="overflow-hidden">
+        <div class="small fw-semibold text-truncate">{{ tenant.company_name }}</div>
+        <div class="xsmall text-muted">{{ tenant_id }}</div>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav px-2">
+      <div class="nav-section-label">Navigation</div>
+
+      <a href="{{ url_for('dashboard', tenant_id=tenant_id) }}"
+         class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-grid-1x2-fill nav-icon"></i>
+        <span>Dashboard</span>
+      </a>
+
+      {% for module in modules %}
+      <a href="{{ url_for('module_page', tenant_id=tenant_id, module_name=module) }}"
+         class="nav-item {% if active_page == module %}active{% endif %}">
+        <i class="bi bi-{{ 
+          {'Products':'box-seam','Orders':'cart-check','Customers':'people',
+           'Patients':'heart-pulse','Doctors':'person-badge','Appointments':'calendar-check',
+           'Students':'mortarboard','Teachers':'person-workspace','Attendance':'check2-square'
+          }.get(module, 'circle') }} nav-icon"></i>
+        <span>{{ module }}</span>
+        <span class="nav-badge" id="badge-{{ module|lower }}">—</span>
+      </a>
+      {% endfor %}
+
+      <div class="nav-section-label mt-3">System</div>
+      <a href="/metrics" target="_blank" class="nav-item">
+        <i class="bi bi-speedometer2 nav-icon"></i>
+        <span>Metrics</span>
+      </a>
+      <a href="/healthz" target="_blank" class="nav-item">
+        <i class="bi bi-activity nav-icon"></i>
+        <span>Health</span>
+      </a>
+    </nav>
+
+    <!-- Sidebar footer -->
+    <div class="sidebar-footer px-3 py-3 mt-auto border-top">
+      <div class="d-flex align-items-center gap-2">
+        <div class="avatar-sm bg-secondary-subtle rounded-circle d-flex align-items-center justify-content-center">
+          <i class="bi bi-person-fill"></i>
+        </div>
+        <div>
+          <div class="small fw-semibold">{{ username }}</div>
+          <div class="xsmall text-muted">Administrator</div>
+        </div>
+        <form method="POST" action="{{ url_for('logout', tenant_id=tenant_id) }}" class="ms-auto">
+          <button type="submit" class="btn btn-sm btn-ghost-danger" title="Logout">
+            <i class="bi bi-box-arrow-right"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </aside><!-- /.sidebar -->
+
+  {# ══════════════════ MAIN AREA ════════════════════════════════ #}
+  <div class="main-area">
+
+    {# ─── NAVBAR ─── #}
+    <nav class="top-navbar px-4 d-flex align-items-center justify-content-between">
+
+      <!-- Hamburger -->
+      <button class="btn btn-icon me-3" id="sidebar-toggle" onclick="toggleSidebar()">
+        <i class="bi bi-list fs-5"></i>
+      </button>
+
+      <!-- Breadcrumb -->
+      <nav aria-label="breadcrumb" class="flex-grow-1">
+        <ol class="breadcrumb mb-0">
+          <li class="breadcrumb-item">
+            <a href="{{ url_for('dashboard', tenant_id=tenant_id) }}" class="text-tenant">
+              {{ tenant.company_name }}
+            </a>
+          </li>
+          <li class="breadcrumb-item active">{% block page_title %}Dashboard{% endblock %}</li>
+        </ol>
+      </nav>
+
+      <!-- Right controls -->
+      <div class="d-flex align-items-center gap-2">
+
+        <!-- Search bar -->
+        <div class="search-bar d-none d-md-flex align-items-center">
+          <i class="bi bi-search search-icon"></i>
+          <input type="text" id="global-search" class="search-input"
+                 placeholder="Search records…" oninput="debounceSearch(this.value)" />
+        </div>
+
+        <!-- Dark mode -->
+        <button class="btn btn-icon" id="dark-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+          <i class="bi bi-moon-stars-fill" id="dark-icon"></i>
+        </button>
+
+        <!-- Notification bell -->
+        <button class="btn btn-icon position-relative" onclick="showToast('No new notifications', 'info')">
+          <i class="bi bi-bell-fill"></i>
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:9px">3</span>
+        </button>
+
+        <!-- Profile dropdown -->
+        <div class="dropdown">
+          <button class="btn btn-profile d-flex align-items-center gap-2" data-bs-toggle="dropdown">
+            <div class="avatar-sm" style="background:var(--tenant-primary)20;border:1.5px solid var(--tenant-primary)">
+              <i class="bi bi-person-fill" style="color:var(--tenant-primary)"></i>
+            </div>
+            <span class="d-none d-md-inline small fw-medium">{{ username }}</span>
+            <i class="bi bi-chevron-down small text-muted"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end glass-dropdown shadow">
+            <li><div class="dropdown-item-text">
+              <div class="fw-semibold">{{ username }}</div>
+              <div class="small text-muted">{{ tenant.company_name }}</div>
+            </div></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Profile</a></li>
+            <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Settings</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <form method="POST" action="{{ url_for('logout', tenant_id=tenant_id) }}">
+                <button type="submit" class="dropdown-item text-danger">
+                  <i class="bi bi-box-arrow-right me-2"></i>Logout
+                </button>
+              </form>
+            </li>
+          </ul>
+        </div>
+
+      </div><!-- /.right controls -->
+    </nav><!-- /.top-navbar -->
+
+    {# ─── PAGE CONTENT ─── #}
+    <main class="page-content">
+      {% block content %}
+
+      {# ═══ DASHBOARD PAGE ═══════════════════════════════════════ #}
+
+      <!-- Page header -->
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+          <h1 class="page-heading mb-1">Dashboard</h1>
+          <p class="text-muted small mb-0">
+            Welcome back, <strong>{{ username }}</strong> · {{ tenant.company_name }}
+          </p>
+        </div>
+        <div class="d-flex gap-2">
+          <span class="status-badge status-active">
+            <i class="bi bi-circle-fill me-1" style="font-size:7px"></i>Live
+          </span>
+          <button class="btn btn-sm btn-outline-tenant" onclick="refreshDashboard()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+          </button>
+        </div>
+      </div>
+
+      {# ─── KPI CARDS ─── #}
+      <div class="row g-3 mb-4">
+
+        <div class="col-6 col-md-4 col-xl-3">
+          <div class="kpi-card">
+            <div class="kpi-icon bg-primary-soft">
+              <i class="bi bi-building text-primary"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">Company</div>
+              <div class="kpi-value small-val">{{ tenant.company_name }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-3">
+          <div class="kpi-card">
+            <div class="kpi-icon bg-tenant-soft">
+              <i class="bi bi-fingerprint" style="color:var(--tenant-primary)"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">Tenant ID</div>
+              <div class="kpi-value small-val">{{ tenant_id }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-3">
+          <div class="kpi-card">
+            <div class="kpi-icon bg-success-soft">
+              <i class="bi bi-database-fill text-success"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">Database</div>
+              <div class="kpi-value small-val">{{ tenant.db_name }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-3">
+          <div class="kpi-card">
+            <div class="kpi-icon bg-warning-soft">
+              <i class="bi bi-hdd-network text-warning"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">Namespace</div>
+              <div class="kpi-value small-val">{{ namespace }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-3">
+          <div class="kpi-card">
+            <div class="kpi-icon bg-info-soft">
+              <i class="bi bi-cloud-fill text-info"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">Environment</div>
+              <div class="kpi-value small-val">{{ environment }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-3">
+          <div class="kpi-card">
+            <div class="kpi-icon bg-secondary-soft">
+              <i class="bi bi-cpu text-secondary"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">Pod Name</div>
+              <div class="kpi-value small-val text-truncate" style="max-width:120px" title="{{ pod_name }}">{{ pod_name }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-3">
+          <div class="kpi-card">
+            <div class="kpi-icon bg-danger-soft">
+              <i class="bi bi-geo-alt-fill text-danger"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">AWS Region</div>
+              <div class="kpi-value small-val">{{ region }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-6 col-md-4 col-xl-3">
+          <div class="kpi-card kpi-highlight">
+            <div class="kpi-icon bg-tenant-soft">
+              <i class="bi bi-collection-fill" style="color:var(--tenant-primary)"></i>
+            </div>
+            <div class="kpi-body">
+              <div class="kpi-label">Total Records</div>
+              <div class="kpi-value fs-4 fw-bold" style="color:var(--tenant-primary)">
+                {{ "{:,}".format(total_records) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.row KPI -->
+
+      {# ─── MODULE COUNTS ─── #}
+      <div class="row g-3 mb-4">
+        {% for module, count in counts.items() %}
+        <div class="col-12 col-sm-6 col-lg-4">
+          <a href="{{ url_for('module_page', tenant_id=tenant_id, module_name=module) }}"
+             class="module-count-card d-block text-decoration-none">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <div class="small text-muted fw-medium">{{ module }}</div>
+                <div class="fs-3 fw-bold mt-1" style="color:var(--tenant-primary)">{{ "{:,}".format(count) }}</div>
+              </div>
+              <div class="module-count-icon">
+                <i class="bi bi-{{ 
+                  {'Products':'box-seam','Orders':'cart-check','Customers':'people',
+                   'Patients':'heart-pulse','Doctors':'person-badge','Appointments':'calendar-check',
+                   'Students':'mortarboard','Teachers':'person-workspace','Attendance':'check2-square'
+                  }.get(module, 'circle') }} fs-2" style="color:var(--tenant-primary);opacity:.3"></i>
+              </div>
+            </div>
+            <div class="mt-2">
+              <div class="progress" style="height:3px">
+                <div class="progress-bar" style="width:{{ [count * 10, 100]|min }}%;background:var(--tenant-primary)"></div>
+              </div>
+            </div>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+
+      {# ─── CHARTS + TABLE ROW ─── #}
+      <div class="row g-4 mb-4">
+
+        <!-- Chart.js Doughnut -->
+        <div class="col-12 col-lg-5">
+          <div class="card-glass h-100">
+            <div class="card-glass-header d-flex align-items-center justify-content-between">
+              <h6 class="mb-0 fw-semibold">
+                <i class="bi bi-pie-chart-fill me-2" style="color:var(--tenant-primary)"></i>
+                Distribution
+              </h6>
+              <span class="badge bg-tenant-soft text-tenant">Live</span>
+            </div>
+            <div class="card-glass-body d-flex align-items-center justify-content-center" style="min-height:260px">
+              <canvas id="doughnut-chart" height="240"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart.js Bar -->
+        <div class="col-12 col-lg-7">
+          <div class="card-glass h-100">
+            <div class="card-glass-header d-flex align-items-center justify-content-between">
+              <h6 class="mb-0 fw-semibold">
+                <i class="bi bi-bar-chart-fill me-2" style="color:var(--tenant-primary)"></i>
+                Record Overview
+              </h6>
+              <button class="btn btn-sm btn-ghost" onclick="Charts.loadCharts()">
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+            </div>
+            <div class="card-glass-body" style="min-height:260px">
+              <canvas id="bar-chart" height="240"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {# ─── RECENT ACTIVITY TABLE ─── #}
+      <div class="card-glass">
+        <div class="card-glass-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <h6 class="mb-0 fw-semibold">
+            <i class="bi bi-table me-2" style="color:var(--tenant-primary)"></i>
+            Recent {{ primary_module }} — {{ tenant.company_name }}
+          </h6>
+          <div class="d-flex gap-2 align-items-center">
+            <input type="text" id="table-search" class="form-control form-control-sm search-input-table"
+                   placeholder="Search…" oninput="debounceTableSearch(this.value)" />
+            <a href="{{ url_for('module_page', tenant_id=tenant_id, module_name=primary_module) }}"
+               class="btn btn-sm btn-outline-tenant">View All</a>
+          </div>
+        </div>
+        <div class="card-glass-body p-0">
+          <div class="table-responsive" id="data-table-wrapper">
+            {% if table_data and table_data.rows %}
+            <table class="table saas-table mb-0" id="main-data-table">
+              <thead>
+                <tr>
+                  {% for col in table_data.columns %}
+                  <th>{{ col | replace('_', ' ') | title }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in table_data.rows %}
+                <tr>
+                  {% for col in table_data.columns %}
+                  <td>
+                    {% set val = row[col] %}
+                    {% if col == 'status' or col == 'order_status' %}
+                      <span class="status-pill status-{{ val }}">{{ val }}</span>
+                    {% elif col == 'price' or col == 'total_price' %}
+                      ₹{{ "{:,.2f}".format(val | float) }}
+                    {% else %}
+                      {{ val if val is not none else '—' }}
+                    {% endif %}
+                  </td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+              <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
+              No records found.
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% if table_data %}
+        <div class="card-glass-footer d-flex align-items-center justify-content-between px-4 py-2">
+          <span class="small text-muted">Showing up to 5 of {{ table_data.total }} records</span>
+          <a href="{{ url_for('module_page', tenant_id=tenant_id, module_name=primary_module) }}"
+             class="btn btn-sm btn-tenant">
+            View All {{ primary_module }} <i class="bi bi-arrow-right ms-1"></i>
+          </a>
+        </div>
+        {% endif %}
+      </div>
+
+      {% endblock %}
+    </main><!-- /.page-content -->
+  </div><!-- /.main-area -->
+</div><!-- /.saas-layout -->
+
+{% block extra_scripts %}
+<script>
+  // Inject tenant context for JS modules
+  window.TENANT = {
+    id:      "{{ tenant_id }}",
+    color:   "{{ tenant.theme_color }}",
+    modules: {{ modules | tojson }},
+  };
+</script>
+{% endblock %}
+{% endblock %}

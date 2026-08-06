@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}500 Server Error{% endblock %}
+{% block body %}
+<div class="error-page d-flex align-items-center justify-content-center min-vh-100">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="text-center error-content">
+    <div class="error-code" style="color:#ef4444">500</div>
+    <h2 class="fw-bold text-white mb-2">Internal Server Error</h2>
+    <p class="text-white-50 mb-4">
+      Something went wrong on our end. Please try again in a moment.
+    </p>
+    {% if tenant_id and tenant %}
+    <a href="{{ url_for('dashboard', tenant_id=tenant_id) }}" class="btn btn-primary-tenant px-4">
+      <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+    </a>
+    {% else %}
+    <a href="/login" class="btn btn-primary-tenant px-4">
+      <i class="bi bi-box-arrow-in-right me-2"></i>Go to Login
+    </a>
+    {% endif %}
+    <div class="mt-4">
+      <div class="error-illustration mx-auto">
+        <i class="bi bi-exclamation-triangle fs-1 text-warning pulse-anim"></i>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

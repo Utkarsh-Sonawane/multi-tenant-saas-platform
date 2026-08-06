@@ -1,0 +1,26 @@
+# ============================================================
+# tenant-a/service.yaml — Kubernetes Service for Tenant A
+# Namespace: tenant-a
+# ============================================================
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: tenant-a-service
+  namespace: tenant-a
+  labels:
+    app: multi-tenant-saas
+    tenant: tenant-a
+  annotations:
+    # AWS ALB controller uses these for health checks
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: "/healthz"
+spec:
+  type: ClusterIP
+  selector:
+    app: multi-tenant-saas
+    tenant: tenant-a
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5000
+      protocol: TCP
