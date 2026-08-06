@@ -13,8 +13,6 @@
 #         http://localhost:5000/tenant-c
 # ============================================================
 
-version: "3.9"
-
 networks:
   saas-net:
     driver: bridge
@@ -62,7 +60,7 @@ services:
       POSTGRES_USER:     postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - ./database:/database
+      - ../database:/database
     working_dir: /database
     command: >
       bash -c "pip install psycopg2-binary -q &&
