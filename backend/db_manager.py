@@ -13,9 +13,13 @@ No hardcoded tenant logic lives here. All routing is data-driven.
 
 from __future__ import annotations
 
+import sys
+import os
 import time
 from threading import Lock
 from typing import Any
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session

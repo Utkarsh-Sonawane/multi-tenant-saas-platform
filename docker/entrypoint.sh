@@ -48,10 +48,12 @@ THREADS="${THREADS:-2}"
 TIMEOUT="${TIMEOUT:-120}"
 PORT="${PORT:-5000}"
 
+export PYTHONPATH="/app/backend:${PYTHONPATH}"
+
 echo "[start] Launching Gunicorn — workers=${WORKERS} class=${WORKER_CLASS} threads=${THREADS}"
 
 exec gunicorn \
-  --chdir /app \
+  --chdir /app/backend \
   --bind "0.0.0.0:${PORT}" \
   --workers "${WORKERS}" \
   --worker-class "${WORKER_CLASS}" \
@@ -63,5 +65,4 @@ exec gunicorn \
   --access-logfile - \
   --error-logfile - \
   --log-level info \
-  --statsd-host "${STATSD_HOST:-}" \
-  "backend.app:app"
+  "app:app"

@@ -17,10 +17,13 @@ Routing strategy:
   GET  /metrics                  → Prometheus scrape endpoint
 """
 
+import sys
+import os
 import time
 import uuid
-import os
 from functools import wraps
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from flask import (
     Flask, g, request, session, redirect, url_for,
