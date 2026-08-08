@@ -1,0 +1,75 @@
+# ============================================================
+# values.yaml — Helm Chart Configuration
+#
+# Single Helm chart deploys all tenants dynamically from this array.
+# ============================================================
+
+global:
+  environment: production
+  awsRegion: ap-south-1
+  image:
+    repository: YOUR_AWS_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/multi-tenant-saas
+    tag: latest
+    pullPolicy: Always
+  configDb:
+    host: "your-rds-endpoint.ap-south-1.rds.amazonaws.com"
+    port: 5432
+    name: config_db
+    user: config_user
+    password: "CHANGE_ME"  # Set via --set global.configDb.password=xxx
+
+# ── Dynamic Tenants Array ──────────────────────────────────
+tenants:
+  - id: tenant-a
+    name: "ABC Retail"
+    namespace: tenant-a
+    replicas: 2
+    db:
+      name: tenant_a_db
+      user: tenant_a_user
+      password: "CHANGE_ME"
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  - id: tenant-b
+    name: "XYZ Hospital"
+    namespace: tenant-b
+    replicas: 2
+    db:
+      name: tenant_b_db
+      user: tenant_b_user
+      password: "CHANGE_ME"
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  - id: tenant-c
+    name: "PQR School"
+    namespace: tenant-c
+    replicas: 2
+    db:
+      name: tenant_c_db
+      user: tenant_c_user
+      password: "CHANGE_ME"
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+# ── Ingress Configuration ──────────────────────────────────
+ingress:
+  enabled: true
+  host: app.example.com
+  certificateArn: "arn:aws:acm:ap-south-1:YOUR_ACCOUNT_ID:certificate/YOUR_CERT_ID"
