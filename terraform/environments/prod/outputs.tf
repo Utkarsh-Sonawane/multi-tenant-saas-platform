@@ -15,10 +15,16 @@ output "subnet_ids" {
   value = module.eks.cluster_endpoint
   description = "The endpoint for the EKS cluster"
  }
- output "alb_arn" {
-  value = module.alb.alb_arn
-  description = "The ARN of the ALB"
- }
-  output "targetgroup_arn" {
-  value = module.alb.targetgroup_arn  
+ #output "alb_arn" {
+ # value = module.alb.alb_arn
+ # description = "The ARN of the ALB"
+ #}
+ # output "targetgroup_arn" {
+ # value = module.alb.targetgroup_arn  
+ # }
+  output "rds_endpoint" {
+  value = module.rds.rds_endpoint
+  }
+  output "ecr_name" {
+  value = module.ecr.repo_name
   }

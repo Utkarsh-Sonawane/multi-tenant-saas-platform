@@ -29,3 +29,14 @@ module "rds" {
   private_subnet_ids = module.vpc.private_subnet_ids
   vpc_id = module.vpc.aws_vpc_id
 }
+module "ecr" {
+  source = "../../modules/ecr"
+  environment = "prod"
+}
+
+#module "alb" {
+#  source = "../../modules/alb"
+#  environment = "prod"
+#  vpc_id = module.vpc.aws_vpc_id
+#  public_subnet_ids = module.vpc.public_subnet_ids
+#}
