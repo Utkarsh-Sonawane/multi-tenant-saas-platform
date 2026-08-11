@@ -1,0 +1,30 @@
+name: AWS OIDC Deployment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'terraform/**' #Only run when Terraform files change
+
+# REQUIRED: Permissions block must explicitly allow writing the ID token
+permissions:
+  id-token: write   # Required for requesting the JWT from GitHub OIDC
+  contents: read    # Required for actions/checkout
+
+jobs:
+  aws-deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::096563427919:role/app-tenant
+          aws-region: ap-south-1 # Change to your target region
+
+      - name: Verify AWS Connection
+        run: |
+          aws sts get-caller-identity
