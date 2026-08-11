@@ -3,19 +3,36 @@ name: AWS OIDC Deployment
 on:
   push:
     branches:
-      - main
+      - dev      # Trigger for Dev environment
+      - main     # Trigger for Prod environment
     paths:
-      - 'terraform/**' #Only run when Terraform files change
+      - 'terraform/**'
+  
+  # Adds a manual "Run Workflow" button in GitHub with a dropdown menu
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Select Environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
 
-# REQUIRED: Permissions block must explicitly allow writing the ID token
 permissions:
-  id-token: write   # Required for requesting the JWT from GitHub OIDC
-  contents: read    # Required for actions/checkout
+  id-token: write
+  contents: read
 
 jobs:
   aws-deployment:
     runs-on: ubuntu-latest
+    
+    # 1. Map the environment dynamically based on the trigger
+    env:
+      # If manual trigger, use the dropdown. If push to main, use prod. Otherwise, dev.
+      DEPLOY_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'prod' || 'dev') }}
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -24,8 +41,27 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::096563427919:role/app-tenant
-          aws-region: ap-south-1 # Change to your target region
+          aws-region: ap-south-1
 
-      - name: Verify AWS Connection
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # 2. Dynamically change the working directory based on the environment
+      - name: Terraform Init
+        working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
+        # Wait for approval logic usually goes here for Prod, but this auto-applies
+        run: terraform apply -auto-approve tfplan
+
+      - name: Save Outputs to AWS SSM Parameter Store
+        working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
         run: |
-          aws sts get-caller-identity
+          RDS_ENDPOINT=$(terraform output -raw rds_endpoint)
+          ECR_URL=$(terraform output -raw ecr_repository_url)
