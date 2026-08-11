@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'terraform/**' #Only run when Terraform files change
+  workflow_dispatch:
 
 # REQUIRED: Permissions block must explicitly allow writing the ID token
 permissions:
