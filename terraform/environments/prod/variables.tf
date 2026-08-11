@@ -19,11 +19,11 @@ variable "public_subnet_cidr_blocks" {
 variable "private_subnet_cidr_blocks" {
   type = list(string)
 }
-variable "aws_access_key" {
-  description = "AWS access key"
-  type        = string
-}
-variable "aws_secret_key" {
-  description = "AWS secret key"
-  type        = string
-}
+#variable "aws_access_key" {
+#  description = "AWS access key"
+#  type        = string
+#}
+#variable "aws_secret_key" {
+#  description = "AWS secret key"
+#  type        = string
+#}

@@ -6,9 +6,7 @@ terraform {
     key            = "prod/terraform.tfstate"            # Unique state path for prod
     region         = "ap-south-1"
   }
-}
 
-terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -16,6 +14,7 @@ terraform {
     }
   }
 }
+
 provider "aws" {
   region = var.aws_region
   #access_key = var.aws_access_key
