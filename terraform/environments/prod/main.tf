@@ -1,4 +1,14 @@
 terraform {
+  required_version = ">= 1.0"
+  
+  backend "s3" {
+    bucket         = "tenant-tfstate-ap-south-1"
+    key            = "prod/terraform.tfstate"            # Unique state path for prod
+    region         = "ap-south-1"
+  }
+}
+
+terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
