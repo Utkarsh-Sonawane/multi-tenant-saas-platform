@@ -50,7 +50,17 @@ jobs:
       - name: Terraform Init
         working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
         run: terraform init
-
+      - name: Generate tfvars file
+        working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
+        run: |
+          cat <<EOF > terraform.tfvars
+          environment                 = "${{ env.DEPLOY_ENV }}"
+          aws_region                  = "ap-south-1"
+          cidr_block                  = "10.0.0.0/16"
+          public_subnet_cidr_blocks   = ["10.0.1.0/24", "10.0.2.0/24"]
+          private_subnet_cidr_blocks  = ["10.0.3.0/24", "10.0.4.0/24"]
+          EOF
+          
       - name: Terraform Plan
         working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
         run: terraform plan -out=tfplan
