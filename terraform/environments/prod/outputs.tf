@@ -28,3 +28,8 @@ output "subnet_ids" {
   output "ecr_name" {
   value = module.ecr.repo_name
   }
+  # Expose the ECR repository URL for external consumers (CI/CD)
+  output "ecr_repository_url" {
+    description = "Fully qualified ECR repository URL (account.dkr.ecr.region.amazonaws.com/repo)"
+    value       = module.ecr.repository_url
+  }
