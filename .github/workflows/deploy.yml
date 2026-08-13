@@ -83,10 +83,21 @@ jobs:
         if: ${{ env.TF_ACTION == 'apply' }}
         working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
         run: |
-          RDS_ENDPOINT=$(terraform output -raw rds_endpoint)
-          ECR_URL=$(terraform output -raw ecr_repository_url)
-          aws ssm put-parameter --name "/myapp/${{ env.DEPLOY_ENV }}/rds_endpoint" --value "$RDS_ENDPOINT" --type String --overwrite
-          aws ssm put-parameter --name "/myapp/${{ env.DEPLOY_ENV }}/ecr_url" --value "$ECR_URL" --type String --overwrite
+                # Read outputs but don't fail the whole job if an output is missing
+                RDS_ENDPOINT=$(terraform output -raw rds_endpoint 2>/dev/null || true)
+                ECR_URL=$(terraform output -raw ecr_repository_url 2>/dev/null || true)
+
+                if [ -n "$RDS_ENDPOINT" ]; then
+                  aws ssm put-parameter --name "/myapp/${{ env.DEPLOY_ENV }}/rds_endpoint" --value "$RDS_ENDPOINT" --type String --overwrite
+                else
+                  echo "rds_endpoint output not found; skipping SSM put"
+                fi
+
+                if [ -n "$ECR_URL" ]; then
+                  aws ssm put-parameter --name "/myapp/${{ env.DEPLOY_ENV }}/ecr_url" --value "$ECR_URL" --type String --overwrite
+                else
+                  echo "ecr_repository_url output not found; skipping SSM put"
+                fi
 
       # --- DESTROY LOGIC ---
       # This step ONLY runs if TF_ACTION is 'destroy'
