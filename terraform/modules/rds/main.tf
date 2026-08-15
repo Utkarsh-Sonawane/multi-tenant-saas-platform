@@ -15,6 +15,12 @@ resource "aws_db_subnet_group" "rds" {
   subnet_ids = var.private_subnet_ids
 }
 
+resource "random_password" "rds_password" {
+  length           = 16
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
 resource "aws_db_instance" "rds_instance" {
   identifier = "demodb"
 
@@ -22,11 +28,11 @@ resource "aws_db_instance" "rds_instance" {
   engine_version    = "8.0"
   instance_class    = "db.t3.micro"
   allocated_storage = 20
-
   db_name  = "demodb"
   username = "admin"
   port     = "3306"
-  password = "utkarsh123"
+  password = "${random_password.rds_password.result}"
+  
 
   iam_database_authentication_enabled = true
   db_subnet_group_name                = aws_db_subnet_group.rds.name
@@ -38,4 +44,17 @@ resource "aws_db_instance" "rds_instance" {
     Owner       = "Master_db"
     Environment = "var"
   }
+}
+
+resource "aws_ssm_parameter" "rds_endpoint" {
+  name        = "/myapp/${var.environment}/rds_endpoint"
+  description = "RDS endpoint for ${var.environment}"
+  type        = "SecureString" 
+  value       = aws_db_instance.rds_instance.endpoint
+}
+resource "aws_ssm_parameter" "rds_pass" {
+  name        = "/myapp/${var.environment}/rds_password"
+  description = "RDS password for ${var.environment}"
+  type        = "SecureString" 
+  value       = random_password.rds_password.result
 }
