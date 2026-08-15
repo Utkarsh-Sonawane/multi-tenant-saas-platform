@@ -28,3 +28,15 @@ output "subnet_ids" {
   output "ecr_name" {
   value = module.ecr.repo_name
   }
+
+  output "ecr_url" {
+  value = module.ecr.repo_url
+  }
+
+  output "ecr_repository_url" {
+  value = module.ecr.repo_url
+  }
+  
+  output "rds_password" {
+  value = module.rds.rds_password
+  }

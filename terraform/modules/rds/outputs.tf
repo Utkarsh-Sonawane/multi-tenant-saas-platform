@@ -1,3 +1,6 @@
 output "rds_endpoint" {
-  value = aws_db_instance.rds_instance.address
+    value = module.rds.rds_instance_endpoint
+}
+output "rds_password" {
+  value = random_password.rds_password.result
 }
