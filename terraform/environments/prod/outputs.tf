@@ -41,4 +41,5 @@ output "ecr_repository_url" {
 output "rds_password" {
   description = "RDS password"
   value       = module.rds.rds_password
+  sensitive   = true
 }
