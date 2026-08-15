@@ -1,14 +1,13 @@
-name: AWS OIDC Deployment
+name: AWS OIDC Deployment & Destroy
 
 on:
   push:
     branches:
-      - dev      # Trigger for Dev environment
-      - main     # Trigger for Prod environment
+      - main
     paths:
       - 'terraform/**'
   
-  # Adds a manual "Run Workflow" button in GitHub with a dropdown menu
+  # Manual trigger with an Apply/Destroy dropdown
   workflow_dispatch:
     inputs:
       environment:
@@ -19,19 +18,28 @@ on:
         options:
           - dev
           - prod
+      action:
+        description: 'Terraform Action (Apply or Destroy)'
+        required: true
+        default: 'apply'
+        type: choice
+        options:
+          - apply
+          - destroy
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  aws-deployment:
+  terraform-execution:
     runs-on: ubuntu-latest
     
-    # 1. Map the environment dynamically based on the trigger
     env:
-      # If manual trigger, use the dropdown. If push to main, use prod. Otherwise, dev.
-      DEPLOY_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'prod' || 'dev') }}
+      # If manual, use dropdown. If push, use prod.
+      DEPLOY_ENV: ${{ github.event.inputs.environment || 'prod' }}
+      # If manual, use dropdown. If push, default to apply.
+      TF_ACTION: ${{ github.event.inputs.action || 'apply' }}
 
     steps:
       - name: Checkout Code
@@ -46,22 +54,34 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # 2. Dynamically change the working directory based on the environment
+      # You only need this step written once since both apply and destroy need variables
+      - name: Generate tfvars file
+        working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
+        run: |
+          cat <<EOF > terraform.tfvars
+          environment                 = "${{ env.DEPLOY_ENV }}"
+          aws_region                  = "ap-south-1"
+          cidr_block                  = "10.0.0.0/16"
+          public_subnet_cidr_blocks   = ["10.0.1.0/24", "10.0.2.0/24"]
+          private_subnet_cidr_blocks  = ["10.0.3.0/24", "10.0.4.0/24"]
+          EOF
+
       - name: Terraform Init
         working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
         run: terraform init
 
-      - name: Terraform Plan
-        working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
-        run: terraform plan -out=tfplan
-
-      - name: Terraform Apply
-        working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
-        # Wait for approval logic usually goes here for Prod, but this auto-applies
-        run: terraform apply -auto-approve tfplan
-
-      - name: Save Outputs to AWS SSM Parameter Store
+      # --- APPLY LOGIC ---
+      # This step ONLY runs if TF_ACTION is 'apply'
+      - name: Terraform Plan & Apply
+        if: ${{ env.TF_ACTION == 'apply' }}
         working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
         run: |
-          RDS_ENDPOINT=$(terraform output -raw rds_endpoint)
-          ECR_URL=$(terraform output -raw ecr_repository_url)
+          terraform plan -out=tfplan
+          terraform apply -auto-approve tfplan
+
+      # --- DESTROY LOGIC ---
+      # This step ONLY runs if TF_ACTION is 'destroy'
+      - name: Terraform Destroy
+        if: ${{ env.TF_ACTION == 'destroy' }}
+        working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
+        run: terraform destroy -auto-approve

@@ -28,6 +28,15 @@ output "subnet_ids" {
   output "ecr_name" {
   value = module.ecr.repo_name
   }
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+  # Expose the ECR repository URL for external consumers (CI/CD)
+  output "ecr_repository_url" {
+    description = "Fully qualified ECR repository URL (account.dkr.ecr.region.amazonaws.com/repo)"
+    value       = module.ecr.repository_url
+=======
+>>>>>>> my-temp-branch
 
   output "ecr_url" {
   value = module.ecr.repo_url
@@ -39,4 +48,8 @@ output "subnet_ids" {
   
   output "rds_password" {
   value = module.rds.rds_password
+<<<<<<< HEAD
+=======
+>>>>>>> 06fe304 (add new code)
+>>>>>>> my-temp-branch
   }
