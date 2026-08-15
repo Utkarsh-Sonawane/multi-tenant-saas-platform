@@ -49,12 +49,15 @@ resource "aws_db_instance" "rds_instance" {
 resource "aws_ssm_parameter" "rds_endpoint" {
   name        = "/myapp/${var.environment}/rds_endpoint"
   description = "RDS endpoint for ${var.environment}"
-  type        = "SecureString" 
+  type        = "SecureString"
   value       = aws_db_instance.rds_instance.endpoint
+  overwrite   = true
 }
+
 resource "aws_ssm_parameter" "rds_pass" {
   name        = "/myapp/${var.environment}/rds_password"
   description = "RDS password for ${var.environment}"
-  type        = "SecureString" 
+  type        = "SecureString"
   value       = random_password.rds_password.result
+  overwrite   = true
 }
