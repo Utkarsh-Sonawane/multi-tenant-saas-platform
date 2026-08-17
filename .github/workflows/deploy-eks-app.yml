@@ -73,30 +73,26 @@ jobs:
           set -euo pipefail
 
           ECR_URL=$(aws ssm get-parameter \
-            --name "/multi-tenant-saas/${ENVIRONMENT}/ecr-url" \
-            --query "Parameter.Value" \
-            --output text)
-
-          RDS_ENDPOINT=$(aws ssm get-parameter \
-            --name "/multi-tenant-saas/${ENVIRONMENT}/rds-endpoint" \
-            --query "Parameter.Value" \
-            --output text)
-
-          RDS_PASSWORD=$(aws ssm get-parameter \
-            --name "/multi-tenant-saas/${ENVIRONMENT}/rds-admin-password" \
+            --name "/myapp/${ENVIRONMENT}/ecr_url" \
             --with-decryption \
             --query "Parameter.Value" \
             --output text)
 
-          CERT_ARN=$(aws ssm get-parameter \
-            --name "/multi-tenant-saas/${ENVIRONMENT}/acm-cert-arn" \
+          RDS_ENDPOINT=$(aws ssm get-parameter \
+            --name "/myapp/${ENVIRONMENT}/rds_endpoint" \
+            --with-decryption \
+            --query "Parameter.Value" \
+            --output text)
+
+          RDS_PASSWORD=$(aws ssm get-parameter \
+            --name "/myapp/${ENVIRONMENT}/rds_password" \
+            --with-decryption \
             --query "Parameter.Value" \
             --output text)
 
           echo "ecr_url=${ECR_URL}" >> "$GITHUB_OUTPUT"
           echo "rds_endpoint=${RDS_ENDPOINT}" >> "$GITHUB_OUTPUT"
           echo "rds_password=${RDS_PASSWORD}" >> "$GITHUB_OUTPUT"
-          echo "cert_arn=${CERT_ARN}" >> "$GITHUB_OUTPUT"
 
       - name: Authenticate Docker to Amazon ECR
         shell: bash
