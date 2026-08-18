@@ -15,6 +15,11 @@ resource "aws_kms_alias" "alias_ecr" {
 resource "aws_ecr_repository" "multi-tenant-app" {
   name                 = "multi-tenant-app"
   image_tag_mutability = "MUTABLE"
+  force_delete          = true
+  
+  lifecycle{
+    prevent_destroy = false
+  }
 
   image_scanning_configuration {
     scan_on_push = true
@@ -23,6 +28,7 @@ resource "aws_ecr_repository" "multi-tenant-app" {
     encryption_type = "KMS"
     kms_key         = aws_kms_key.key_ecr.arn
   }
+
   tags = {
     Name        = "multi-tenant-app"
     Environment = var.environment
