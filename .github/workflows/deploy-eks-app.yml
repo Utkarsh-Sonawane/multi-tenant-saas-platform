@@ -73,23 +73,23 @@ jobs:
           set -euo pipefail
 
           ECR_URL=$(aws ssm get-parameter \
-            --name "/multi-tenant-saas/${ENVIRONMENT}/ecr-url" \
+            --name "/myapp/${ENVIRONMENT}/ecr-url" \
             --query "Parameter.Value" \
             --output text)
 
           RDS_ENDPOINT=$(aws ssm get-parameter \
-            --name "/multi-tenant-saas/${ENVIRONMENT}/rds-endpoint" \
+            --name "/myapp/${ENVIRONMENT}/rds-endpoint" \
             --query "Parameter.Value" \
             --output text)
 
           RDS_PASSWORD=$(aws ssm get-parameter \
-            --name "/multi-tenant-saas/${ENVIRONMENT}/rds-admin-password" \
+            --name "/myapp/${ENVIRONMENT}/rds-password" \
             --with-decryption \
             --query "Parameter.Value" \
             --output text)
 
           CERT_ARN=$(aws ssm get-parameter \
-            --name "/multi-tenant-saas/${ENVIRONMENT}/acm-cert-arn" \
+            --name "/myapp/${ENVIRONMENT}/acm-cert-arn" \
             --query "Parameter.Value" \
             --output text)
 
