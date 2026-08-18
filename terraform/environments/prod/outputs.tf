@@ -43,3 +43,8 @@ output "rds_password" {
   value       = module.rds.rds_password
   sensitive   = true
 }
+
+output "bootstrap_ssm_role_arn" { value = aws_iam_role.ssm_reader["bootstrap"].arn }
+output "tenant_a_ssm_role_arn" { value = aws_iam_role.ssm_reader["tenant_a"].arn }
+output "tenant_b_ssm_role_arn" { value = aws_iam_role.ssm_reader["tenant_b"].arn }
+output "tenant_c_ssm_role_arn" { value = aws_iam_role.ssm_reader["tenant_c"].arn }

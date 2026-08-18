@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS patients (id serial PRIMARY KEY,first_name varchar(100) NOT NULL,last_name varchar(100) NOT NULL,date_of_birth date NOT NULL,gender varchar(10) NOT NULL,blood_group varchar(10),city varchar(100),status varchar(20) NOT NULL DEFAULT 'active');
+CREATE TABLE IF NOT EXISTS doctors (id serial PRIMARY KEY,first_name varchar(100) NOT NULL,last_name varchar(100) NOT NULL,specialization varchar(100) NOT NULL,department varchar(100) NOT NULL,experience_yrs integer NOT NULL DEFAULT 0,status varchar(20) NOT NULL DEFAULT 'active');
+CREATE TABLE IF NOT EXISTS appointments (id serial PRIMARY KEY,patient_id integer NOT NULL REFERENCES patients(id),doctor_id integer NOT NULL REFERENCES doctors(id),appointment_date date NOT NULL,appointment_time time NOT NULL,reason text,status varchar(30) NOT NULL DEFAULT 'scheduled');
+CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appointment_date);

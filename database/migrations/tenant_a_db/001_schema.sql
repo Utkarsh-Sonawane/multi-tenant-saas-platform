@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS products (id serial PRIMARY KEY,name varchar(200) NOT NULL,category varchar(100) NOT NULL,sku varchar(50) UNIQUE NOT NULL,price numeric(10,2) NOT NULL,stock_qty integer NOT NULL DEFAULT 0,status varchar(20) NOT NULL DEFAULT 'active');
+CREATE TABLE IF NOT EXISTS customers (id serial PRIMARY KEY,first_name varchar(100) NOT NULL,last_name varchar(100) NOT NULL,email varchar(200) UNIQUE NOT NULL,phone varchar(30),city varchar(100),status varchar(20) NOT NULL DEFAULT 'active');
+CREATE TABLE IF NOT EXISTS orders (id serial PRIMARY KEY,customer_id integer NOT NULL REFERENCES customers(id),product_id integer NOT NULL REFERENCES products(id),quantity integer NOT NULL DEFAULT 1,total_price numeric(10,2) NOT NULL,order_status varchar(30) NOT NULL DEFAULT 'pending',order_date timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(order_date);

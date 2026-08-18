@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-bootstrap-config
+  namespace: tenant-a
+data:
+  RDS_PORT: "5432"

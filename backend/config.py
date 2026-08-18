@@ -7,6 +7,7 @@ can be deployed across different tenants and environments.
 
 import os
 from dotenv import load_dotenv
+from sqlalchemy import URL
 
 load_dotenv()
 
@@ -36,6 +37,7 @@ class Config:
     K8S_NAMESPACE       = os.getenv("K8S_NAMESPACE",  "default")
     K8S_POD_NAME        = os.getenv("HOSTNAME",        "local-pod")
     ENVIRONMENT         = os.getenv("ENVIRONMENT",     "development")
+    DEPLOYED_TENANT_ID  = os.getenv("DEPLOYED_TENANT_ID", "")
 
     # ─── Session / auth ────────────────────────────────────────
     SESSION_COOKIE_HTTPONLY  = True
@@ -54,15 +56,13 @@ class Config:
 
     @classmethod
     def get_config_db_uri(cls) -> str:
-        return (
-            f"postgresql+psycopg2://{cls.CONFIG_DB_USER}:{cls.CONFIG_DB_PASSWORD}"
-            f"@{cls.CONFIG_DB_HOST}:{cls.CONFIG_DB_PORT}/{cls.CONFIG_DB_NAME}"
-        )
+        return URL.create("postgresql+psycopg2", username=cls.CONFIG_DB_USER,
+                          password=cls.CONFIG_DB_PASSWORD, host=cls.CONFIG_DB_HOST,
+                          port=cls.CONFIG_DB_PORT, database=cls.CONFIG_DB_NAME).render_as_string(hide_password=False)
 
     @classmethod
     def get_tenant_db_uri(cls, db_name: str) -> str:
         """Build a SQLAlchemy URI for a specific tenant database."""
-        return (
-            f"postgresql+psycopg2://{cls.TENANT_DB_USER}:{cls.TENANT_DB_PASSWORD}"
-            f"@{cls.TENANT_DB_HOST}:{cls.TENANT_DB_PORT}/{db_name}"
-        )
+        return URL.create("postgresql+psycopg2", username=cls.TENANT_DB_USER,
+                          password=cls.TENANT_DB_PASSWORD, host=cls.TENANT_DB_HOST,
+                          port=cls.TENANT_DB_PORT, database=db_name).render_as_string(hide_password=False)
