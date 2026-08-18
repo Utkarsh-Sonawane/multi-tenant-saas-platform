@@ -88,11 +88,6 @@ jobs:
             --query "Parameter.Value" \
             --output text)
 
-          CERT_ARN=$(aws ssm get-parameter \
-            --name "/myapp/${ENVIRONMENT}/acm-cert-arn" \
-            --query "Parameter.Value" \
-            --output text)
-
           echo "ecr_url=${ECR_URL}" >> "$GITHUB_OUTPUT"
           echo "rds_endpoint=${RDS_ENDPOINT}" >> "$GITHUB_OUTPUT"
           echo "rds_password=${RDS_PASSWORD}" >> "$GITHUB_OUTPUT"
