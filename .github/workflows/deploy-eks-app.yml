@@ -47,7 +47,7 @@ jobs:
       AWS_REGION: ap-south-1
       ENVIRONMENT: ${{ github.event.inputs.environment || 'prod' }}
       IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
-      CLUSTER_NAME: multi-tenant-eks-cluster
+      CLUSTER_NAME: EKS_cluster
       HELM_RELEASE: multi-tenant-saas
       HELM_CHART_PATH: ./helm/multi-tenant-saas
 
