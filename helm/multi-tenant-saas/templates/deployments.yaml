@@ -9,7 +9,8 @@ metadata:
     tenant: {{ .id }}
     version: {{ $.Chart.AppVersion | quote }}
 spec:
-  replicas: {{ .replicas }}
+  # replicas: allow per-tenant override otherwise default to 2
+  replicas: {{ default 2 .replicas }}
   selector:
     matchLabels:
       app: multi-tenant-saas
@@ -52,8 +53,21 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            # Inject computed DB_NAME derived from tenant id: replace '-' with '_' and append _db
+            - name: DB_NAME
+              value: {{ printf "%s_db" (replace .id "-" "_") | quote }}
+          {{- if .resources }}
           resources:
             {{- toYaml .resources | nindent 12 }}
+          {{- else }}
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz

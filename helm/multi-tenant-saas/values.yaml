@@ -21,52 +21,16 @@ global:
 # ── Dynamic Tenants Array ──────────────────────────────────
 tenants:
   - id: tenant-a
-    name: "ABC Retail"
     namespace: tenant-a
-    replicas: 2
-    db:
-      name: tenant_a_db
-      user: tenant_a_user
-      password: "CHANGE_ME"
-    resources:
-      requests:
-        cpu: 250m
-        memory: 256Mi
-      limits:
-        cpu: 500m
-        memory: 512Mi
+    name: ABC Retail
 
   - id: tenant-b
-    name: "XYZ Hospital"
     namespace: tenant-b
-    replicas: 2
-    db:
-      name: tenant_b_db
-      user: tenant_b_user
-      password: "CHANGE_ME"
-    resources:
-      requests:
-        cpu: 250m
-        memory: 256Mi
-      limits:
-        cpu: 500m
-        memory: 512Mi
+    name: XYZ Hospital
 
   - id: tenant-c
-    name: "PQR School"
     namespace: tenant-c
-    replicas: 2
-    db:
-      name: tenant_c_db
-      user: tenant_c_user
-      password: "CHANGE_ME"
-    resources:
-      requests:
-        cpu: 250m
-        memory: 256Mi
-      limits:
-        cpu: 500m
-        memory: 512Mi
+    name: PQR School
 
 # ── Ingress Configuration ──────────────────────────────────
 ingress:

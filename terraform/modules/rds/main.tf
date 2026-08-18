@@ -3,8 +3,8 @@ resource "aws_security_group" "rds" {
   vpc_id = var.vpc_id
 
   ingress {
-    from_port   = 5432
-    to_port     = 5432
+    from_port   = 3306
+    to_port     = 3306
     protocol    = "tcp"
     cidr_blocks = ["10.0.0.0/16"]
   }
@@ -24,13 +24,13 @@ resource "random_password" "rds_password" {
 resource "aws_db_instance" "rds_instance" {
   identifier = "demodb"
 
-  engine            = "postgres"
-  engine_version    = "13.4"
+  engine            = "mysql"
+  engine_version    = "8.0"
   instance_class    = "db.t3.micro"
   allocated_storage = 20
   db_name  = "demodb"
   username = "admin"
-  port     = "5432"
+  port     = "3306"
   password = "${random_password.rds_password.result}"
   
 
