@@ -47,7 +47,7 @@ jobs:
       AWS_REGION: ap-south-1
       ENVIRONMENT: ${{ github.event.inputs.environment || 'prod' }}
       IMAGE_TAG: ${{ github.event.inputs.image_tag || github.sha }}
-      CLUSTER_NAME: EKS_cluster
+      CLUSTER_NAME: multi-tenant-eks-cluster
       HELM_RELEASE: multi-tenant-saas
       HELM_CHART_PATH: ./helm/multi-tenant-saas
 
@@ -88,9 +88,15 @@ jobs:
             --query "Parameter.Value" \
             --output text)
 
+          CERT_ARN=$(aws ssm get-parameter \
+            --name "/multi-tenant-saas/${ENVIRONMENT}/acm-cert-arn" \
+            --query "Parameter.Value" \
+            --output text)
+
           echo "ecr_url=${ECR_URL}" >> "$GITHUB_OUTPUT"
           echo "rds_endpoint=${RDS_ENDPOINT}" >> "$GITHUB_OUTPUT"
           echo "rds_password=${RDS_PASSWORD}" >> "$GITHUB_OUTPUT"
+          echo "cert_arn=${CERT_ARN}" >> "$GITHUB_OUTPUT"
 
       - name: Authenticate Docker to Amazon ECR
         shell: bash
