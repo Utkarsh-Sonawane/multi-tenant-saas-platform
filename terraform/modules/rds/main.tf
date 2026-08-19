@@ -118,7 +118,7 @@ resource "aws_ssm_parameter" "tenant_db_username" {
   for_each  = random_password.tenant_db_password
   name      = "/multi-tenant/${var.environment}/${each.key}/db/username"
   type      = "String"
-  value     = replace(each.key, "-", "_") + "_user"
+  value     = "${replace(each.key, "-", "_")}_user"
   overwrite = true
 }
 
