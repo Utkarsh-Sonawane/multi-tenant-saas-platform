@@ -66,11 +66,6 @@ def _before():
     if parts and parts[0].startswith("tenant-"):
         g.tenant_id = parts[0]
 
-    # In Kubernetes each deployment is bound to exactly one tenant.  This
-    # prevents a request routed to tenant-a's Pod from querying another tenant.
-    if Config.DEPLOYED_TENANT_ID and g.tenant_id not in ("unknown", Config.DEPLOYED_TENANT_ID):
-        abort(404)
-
     prom.record_request_start(g.tenant_id, request.method)
 
 

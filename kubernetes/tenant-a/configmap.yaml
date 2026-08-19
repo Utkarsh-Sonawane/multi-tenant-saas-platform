@@ -13,13 +13,14 @@ metadata:
     tenant: tenant-a
 data:
   # ── Config DB (shared registry) ──────────────────────────
+  CONFIG_DB_HOST: "your-rds-endpoint.ap-south-1.rds.amazonaws.com"
   CONFIG_DB_PORT: "5432"
   CONFIG_DB_NAME: "config_db"
   CONFIG_DB_USER: "config_user"
 
   # ── Tenant-specific DB ───────────────────────────────────
+  DB_HOST: "your-rds-endpoint.ap-south-1.rds.amazonaws.com"
   DB_PORT: "5432"
-  DEPLOYED_TENANT_ID: "tenant-a"
 
   # ── Application settings ─────────────────────────────────
   ENVIRONMENT:    "production"

@@ -1,4 +1,0 @@
-CREATE TABLE IF NOT EXISTS teachers (id serial PRIMARY KEY,first_name varchar(100) NOT NULL,last_name varchar(100) NOT NULL,subject varchar(100) NOT NULL,department varchar(100) NOT NULL,experience_yrs integer NOT NULL DEFAULT 0,status varchar(20) NOT NULL DEFAULT 'active');
-CREATE TABLE IF NOT EXISTS students (id serial PRIMARY KEY,first_name varchar(100) NOT NULL,last_name varchar(100) NOT NULL,roll_number varchar(30) UNIQUE NOT NULL,class_grade varchar(20) NOT NULL,section varchar(5) NOT NULL,gender varchar(10) NOT NULL,status varchar(20) NOT NULL DEFAULT 'active');
-CREATE TABLE IF NOT EXISTS attendance (id serial PRIMARY KEY,student_id integer NOT NULL REFERENCES students(id),attendance_date date NOT NULL,status varchar(15) NOT NULL DEFAULT 'present',remarks varchar(200));
-CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(attendance_date);

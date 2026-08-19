@@ -1,0 +1,23 @@
+{{- range .Values.tenants }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .id }}-service
+  namespace: {{ .namespace }}
+  labels:
+    app: multi-tenant-saas
+    tenant: {{ .id }}
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: "/healthz"
+spec:
+  type: ClusterIP
+  selector:
+    app: multi-tenant-saas
+    tenant: {{ .id }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: 5000
+      protocol: TCP
+---
+{{- end }}

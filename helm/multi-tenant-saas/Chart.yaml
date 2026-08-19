@@ -1,0 +1,16 @@
+apiVersion: v2
+name: multi-tenant-saas
+description: Helm chart for Multi-Tenant SaaS Platform on Amazon EKS
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - kubernetes
+  - multi-tenant
+  - saas
+  - eks
+  - rds
+  - flask
+maintainers:
+  - name: DevOps Team
+    email: devops@example.com

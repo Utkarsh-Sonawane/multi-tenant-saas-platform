@@ -9,8 +9,8 @@ variable "cidr_block" {
 }
 variable "aws_region" {
   description = "AWS region"
-
-  type = string
+ 
+  type        = string
 }
 variable "public_subnet_cidr_blocks" {
   type = list(string)
