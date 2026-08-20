@@ -263,7 +263,7 @@ kubectl get ingress multi-tenant-saas-ingress -n tenant-a \
   -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
 ```
 
-Add a CNAME DNS record: `app.example.com` → ALB hostname.
+Open the ALB hostname directly over HTTP. No custom domain is required.
 
 ### Step 10 — Verify
 
@@ -331,7 +331,7 @@ kubectl apply -f https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch
 | Pod security | `runAsNonRoot: true`, drop all capabilities |
 | Network | Security Group allows only ALB → pods on port 5000 |
 | Database | RDS in private subnet, security group allows only EKS node CIDR |
-| TLS | ACM certificate on ALB, HTTP → HTTPS redirect |
+| Transport | HTTP on the ALB |
 | WAF | AWS WAF v2 on ALB (see ingress annotation) |
 | RBAC | Separate ServiceAccount per namespace with minimal permissions |
 

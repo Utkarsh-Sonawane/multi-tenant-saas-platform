@@ -4,33 +4,28 @@
 # Prerequisites:
 #   1. AWS Load Balancer Controller installed in the EKS cluster
 #   2. An IAM OIDC provider associated with the cluster
-#   3. A valid ACM certificate for your domain (replace ARN below)
-#
 # Apply: kubectl apply -f kubernetes/ingress-alb.yaml
 #
-# This creates ONE Application Load Balancer with path-based
-# routing to three separate tenant namespaces & services.
+# These three namespace-local Ingress resources share ONE Application
+# Load Balancer through the AWS Load Balancer Controller group feature.
 # ============================================================
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: multi-tenant-saas-ingress
-  namespace: tenant-a        # ALB controller resolves cross-ns via annotations
+  namespace: tenant-a
   labels:
     app: multi-tenant-saas
   annotations:
     # ── ALB Controller ──────────────────────────────────────
     kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/group.name: multi-tenant-saas
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
 
-    # ── SSL / HTTPS ─────────────────────────────────────────
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
-    alb.ingress.kubernetes.io/ssl-redirect: "443"
-    # Replace with your ACM certificate ARN:
-    alb.ingress.kubernetes.io/certificate-arn: >-
-      arn:aws:acm:ap-south-1:YOUR_ACCOUNT_ID:certificate/YOUR_CERT_ID
+    # ── HTTP ────────────────────────────────────────────────
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
 
     # ── Health check ────────────────────────────────────────
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
@@ -55,15 +50,9 @@ metadata:
       Project=multi-tenant-saas,
       ManagedBy=kubectl
 
-    # ── WAF (optional — replace with your WAF ACL ARN) ───────
-    # alb.ingress.kubernetes.io/wafv2-acl-arn: >-
-    #   arn:aws:wafv2:ap-south-1:YOUR_ACCOUNT_ID:regional/webacl/YOUR_WEBACL_ID
-
 spec:
   rules:
-    # ── Replace 'app.example.com' with your actual domain ───
-    - host: app.example.com
-      http:
+    - http:
         paths:
 
           # ── Tenant A — ABC Retail ─────────────────────────
@@ -75,7 +64,34 @@ spec:
                 port:
                   number: 80
 
-          # ── Tenant B — XYZ Hospital ───────────────────────
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tenant-a-service
+                port:
+                  number: 80
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: multi-tenant-saas-ingress
+  namespace: tenant-b
+  labels:
+    app: multi-tenant-saas
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/group.name: multi-tenant-saas
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/tags: Environment=production,Project=multi-tenant-saas,ManagedBy=kubectl
+spec:
+  rules:
+    - http:
+        paths:
           - path: /tenant-b
             pathType: Prefix
             backend:
@@ -84,7 +100,26 @@ spec:
                 port:
                   number: 80
 
-          # ── Tenant C — PQR School ─────────────────────────
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: multi-tenant-saas-ingress
+  namespace: tenant-c
+  labels:
+    app: multi-tenant-saas
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/group.name: multi-tenant-saas
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/tags: Environment=production,Project=multi-tenant-saas,ManagedBy=kubectl
+spec:
+  rules:
+    - http:
+        paths:
           - path: /tenant-c
             pathType: Prefix
             backend:
@@ -93,11 +128,3 @@ spec:
                 port:
                   number: 80
 
-          # ── Fallback: Login page ──────────────────────────
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: tenant-a-service    # Login is served by any replica
-                port:
-                  number: 80

@@ -1,6 +1,6 @@
 resource "aws_security_group" "alb_sg" {
   name        = "${var.environment}-k8s-alb-sg"
-  description = "Allow inbound public HTTP/HTTPS traffic to ALB"
+  description = "Allow inbound public HTTP traffic to ALB"
   vpc_id      = var.vpc_id
 
   ingress {
