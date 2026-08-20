@@ -31,7 +31,7 @@ resource "aws_ecr_repository" "multi-tenant-app" {
 resource "aws_ssm_parameter" "ecr_url" {
   name        = "/myapp/${var.environment}/ecr_url"
   description = "ECR URL for ${var.environment}"
-  type        = "SecureString"
+  type        = "String"
   value       = aws_ecr_repository.multi-tenant-app.repository_url
   overwrite   = true
 }
