@@ -15,6 +15,7 @@ resource "aws_kms_alias" "alias_ecr" {
 resource "aws_ecr_repository" "multi-tenant-app" {
   name                 = "multi-tenant-app"
   image_tag_mutability = "MUTABLE"
+  force_delete          = true
 
   image_scanning_configuration {
     scan_on_push = true

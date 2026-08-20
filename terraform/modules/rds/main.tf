@@ -3,8 +3,8 @@ resource "aws_security_group" "rds" {
   vpc_id = var.vpc_id
 
   ingress {
-    from_port   = 3306
-    to_port     = 3306
+    from_port   = 5432
+    to_port     = 5432
     protocol    = "tcp"
     cidr_blocks = ["10.0.0.0/16"]
   }
@@ -22,27 +22,26 @@ resource "random_password" "rds_password" {
 }
 
 resource "aws_db_instance" "rds_instance" {
-  identifier = "demodb"
+  identifier = "multi-tenant-postgres"
 
-  engine            = "mysql"
-  engine_version    = "8.0"
+  engine            = "postgres"
+  engine_version    = "15"
   instance_class    = "db.t3.micro"
   allocated_storage = 20
-  db_name  = "demodb"
-  username = "admin"
-  port     = "3306"
-  password = "${random_password.rds_password.result}"
-  
+  db_name           = "config_db"
+  username          = "postgres"
+  port              = "5432"
+  password          = random_password.rds_password.result
 
   iam_database_authentication_enabled = true
   db_subnet_group_name                = aws_db_subnet_group.rds.name
-  vpc_security_group_ids             = [aws_security_group.rds.id]
-  skip_final_snapshot                = true
-  deletion_protection                = false
+  vpc_security_group_ids              = [aws_security_group.rds.id]
+  skip_final_snapshot                 = true
+  deletion_protection                 = false
 
   tags = {
     Owner       = "Master_db"
-    Environment = "var"
+    Environment = var.environment
   }
 }
 
