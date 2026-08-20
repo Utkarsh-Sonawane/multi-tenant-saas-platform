@@ -36,4 +36,3 @@ tenants:
 ingress:
   enabled: true
   host: app.example.com
-  certificateArn: "arn:aws:acm:ap-south-1:YOUR_ACCOUNT_ID:certificate/YOUR_CERT_ID"
