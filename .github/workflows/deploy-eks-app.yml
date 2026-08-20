@@ -65,7 +65,7 @@ jobs:
 
           RDS_ENDPOINT=$(aws ssm get-parameter \
             --name "/myapp/${ENVIRONMENT}/rds_endpoint" \
-            -- with-decryption \
+            --with-decryption \
             --query "Parameter.Value" \
             --output text)
 
