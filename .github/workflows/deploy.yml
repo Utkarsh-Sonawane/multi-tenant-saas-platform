@@ -84,4 +84,10 @@ jobs:
       - name: Terraform Destroy
         if: ${{ env.TF_ACTION == 'destroy' }}
         working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
-        run: terraform destroy -auto-approve
+        run: |
+          set -euo pipefail
+          echo "Terraform state before destroy:"
+          terraform state list
+          terraform plan -destroy -input=false -out=destroy.tfplan
+          terraform show -no-color destroy.tfplan
+          terraform apply -auto-approve -input=false destroy.tfplan
