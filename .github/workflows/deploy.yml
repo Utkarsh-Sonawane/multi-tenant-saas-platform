@@ -70,6 +70,16 @@ jobs:
         working-directory: ./terraform/environments/${{ env.DEPLOY_ENV }}
         run: terraform init
 
+      - name: Adopt existing ECR KMS alias
+        if: ${{ env.TF_ACTION == 'apply' && env.DEPLOY_ENV == 'prod' }}
+        working-directory: ./terraform/environments/prod
+        run: |
+          alias_address='module.ecr.aws_kms_alias.alias_ecr'
+          if aws kms describe-alias --alias-name alias/ecr >/dev/null 2>&1 && \
+             ! terraform state list | grep -Fxq "$alias_address"; then
+            terraform import "$alias_address" alias/ecr
+          fi
+
       # --- APPLY LOGIC ---
       # This step ONLY runs if TF_ACTION is 'apply'
       - name: Terraform Plan & Apply
