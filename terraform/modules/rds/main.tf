@@ -52,6 +52,13 @@ resource "aws_ssm_parameter" "rds_endpoint" {
   value       = aws_db_instance.rds_instance.address
   overwrite   = true
 }
+resource "aws_ssm_parameter" "rds_port" {
+  name        = "/myapp/${var.environment}/rds_port"
+  description = "RDS port for ${var.environment}"
+  type        = "String"
+  value       = "5432"
+  overwrite = true
+}
 
 resource "aws_ssm_parameter" "rds_pass" {
   name        = "/myapp/${var.environment}/rds_password"
