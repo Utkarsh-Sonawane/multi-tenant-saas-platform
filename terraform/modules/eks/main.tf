@@ -117,3 +117,17 @@ resource "aws_iam_role_policy_attachment" "cluster_AmazonEKSNetworkingPolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSNetworkingPolicy"
   role       = aws_iam_role.cluster.name
 }
+resource "aws_eks_access_entry" "admin_user" {
+  cluster_name  = aws_eks_cluster.EKS_cluster.name
+  principal_arn = "arn:aws:iam::096563427919:user/eks-admin" # Replace with your IAM user ARN
+  type          = "STANDARD"
+}
+resource "aws_eks_access_policy_association" "admin_user_policy" {
+  cluster_name  = aws_eks_cluster.EKS_cluster.name
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  principal_arn = aws_eks_access_entry.admin_user.principal_arn
+  
+  access_scope {
+    type = "cluster"
+  }
+}

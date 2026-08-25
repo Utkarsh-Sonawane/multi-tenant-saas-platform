@@ -74,9 +74,10 @@ jobs:
         if: ${{ env.TF_ACTION == 'apply' && env.DEPLOY_ENV == 'prod' }}
         working-directory: ./terraform/environments/prod
         run: |
+          set -euo pipefail
           alias_address='module.ecr.aws_kms_alias.alias_ecr'
-          if aws kms describe-alias --alias-name alias/ecr >/dev/null 2>&1 && \
-             ! terraform state list | grep -Fxq "$alias_address"; then
+          if ! terraform state show "$alias_address" >/dev/null 2>&1 && \
+             aws kms describe-alias --alias-name alias/ecr >/dev/null 2>&1; then
             terraform import "$alias_address" alias/ecr
           fi
 
