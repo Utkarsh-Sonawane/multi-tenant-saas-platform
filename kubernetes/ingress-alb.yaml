@@ -1,74 +1,139 @@
 # ============================================================
-# ingress-alb.yaml — AWS ALB Ingress for EKS Auto Mode
+# ingress-alb.yaml
+# AWS ALB for Amazon EKS Auto Mode
 #
-# EKS Auto Mode automatically manages the AWS load balancer.
+# EKS Auto Mode provides the ALB controller automatically.
 # No AWS Load Balancer Controller installation is required.
 # No Helm installation is required.
 #
-# Apply:
-#   kubectl apply -f kubernetes/ingress-alb.yaml
+# This file creates:
 #
-# Three namespace-local Ingress resources use the same
-# IngressClass and ALB group.
+#   1. IngressClassParams
+#   2. IngressClass
+#   3. Tenant A Ingress
+#   4. Tenant B Ingress
+#   5. Tenant C Ingress
+#
 # ============================================================
 
+
 # ============================================================
-# TENANT A
+# 1. INGRESS CLASS PARAMS
+# ============================================================
+
+apiVersion: eks.amazonaws.com/v1
+kind: IngressClassParams
+metadata:
+  name: alb
+spec:
+
+  # Internet-facing ALB
+  scheme: internet-facing
+
+  # All three tenant Ingress objects use the same ALB group.
+  # In Auto Mode, grouping is configured here instead of using
+  # alb.ingress.kubernetes.io/group.name.
+  group:
+    name: multi-tenant-saas
+
+  # Use IP targets.
+  # ALB sends traffic directly to Pod IPs.
+  targetType: ip
+
+  # ALB attributes
+  loadBalancerAttributes:
+    - key: idle_timeout.timeout_seconds
+      value: "60"
+
+    - key: routing.http2.enabled
+      value: "true"
+
+    - key: access_logs.s3.enabled
+      value: "false"
+
+---
+
+# ============================================================
+# 2. INGRESS CLASS
+# ============================================================
+
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+
+metadata:
+  name: alb
+
+spec:
+
+  # AWS EKS Auto Mode built-in ALB controller
+  controller: eks.amazonaws.com/alb
+
+  parameters:
+    apiGroup: eks.amazonaws.com
+    kind: IngressClassParams
+    name: alb
+
+
+---
+
+# ============================================================
+# 3. TENANT A
 # ============================================================
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
+
 metadata:
   name: multi-tenant-saas-ingress
   namespace: tenant-a
+
   labels:
     app: multi-tenant-saas
+
   annotations:
-    alb.ingress.kubernetes.io/group.name: multi-tenant-saas
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: ip
 
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
-
+    # ALB health check
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
     alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
     alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
     alb.ingress.kubernetes.io/healthy-threshold-count: "2"
     alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
 
-    alb.ingress.kubernetes.io/load-balancer-attributes: >-
-      idle_timeout.timeout_seconds=60,
-      routing.http2.enabled=true,
-      access_logs.s3.enabled=false
-
+    # Target group configuration
     alb.ingress.kubernetes.io/target-group-attributes: >-
       stickiness.enabled=false,
       deregistration_delay.timeout_seconds=30
 
-    alb.ingress.kubernetes.io/tags: >-
-      Environment=production,
-      Project=multi-tenant-saas,
-      ManagedBy=kubectl
-
 spec:
+
   ingressClassName: alb
 
   rules:
+
     - http:
+
         paths:
 
+          # --------------------------------------------------
           # Tenant A
+          # --------------------------------------------------
+
           - path: /tenant-a
             pathType: Prefix
+
             backend:
               service:
                 name: tenant-a-service
                 port:
                   number: 80
 
+          # --------------------------------------------------
           # Default route
+          # --------------------------------------------------
+
           - path: /
             pathType: Prefix
+
             backend:
               service:
                 name: tenant-a-service
@@ -77,41 +142,52 @@ spec:
 
 
 ---
+
 # ============================================================
-# TENANT B
+# 4. TENANT B
 # ============================================================
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
+
 metadata:
   name: multi-tenant-saas-ingress
   namespace: tenant-b
+
   labels:
     app: multi-tenant-saas
+
   annotations:
-    alb.ingress.kubernetes.io/group.name: multi-tenant-saas
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: ip
 
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
-
+    # ALB health check
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
 
-    alb.ingress.kubernetes.io/tags: >-
-      Environment=production,
-      Project=multi-tenant-saas,
-      ManagedBy=kubectl
+    # Target group configuration
+    alb.ingress.kubernetes.io/target-group-attributes: >-
+      stickiness.enabled=false,
+      deregistration_delay.timeout_seconds=30
 
 spec:
+
   ingressClassName: alb
 
   rules:
+
     - http:
+
         paths:
 
+          # --------------------------------------------------
           # Tenant B
+          # --------------------------------------------------
+
           - path: /tenant-b
             pathType: Prefix
+
             backend:
               service:
                 name: tenant-b-service
@@ -120,41 +196,52 @@ spec:
 
 
 ---
+
 # ============================================================
-# TENANT C
+# 5. TENANT C
 # ============================================================
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
+
 metadata:
   name: multi-tenant-saas-ingress
   namespace: tenant-c
+
   labels:
     app: multi-tenant-saas
+
   annotations:
-    alb.ingress.kubernetes.io/group.name: multi-tenant-saas
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: ip
 
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
-
+    # ALB health check
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
 
-    alb.ingress.kubernetes.io/tags: >-
-      Environment=production,
-      Project=multi-tenant-saas,
-      ManagedBy=kubectl
+    # Target group configuration
+    alb.ingress.kubernetes.io/target-group-attributes: >-
+      stickiness.enabled=false,
+      deregistration_delay.timeout_seconds=30
 
 spec:
+
   ingressClassName: alb
 
   rules:
+
     - http:
+
         paths:
 
+          # --------------------------------------------------
           # Tenant C
+          # --------------------------------------------------
+
           - path: /tenant-c
             pathType: Prefix
+
             backend:
               service:
                 name: tenant-c-service
