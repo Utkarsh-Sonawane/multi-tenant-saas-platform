@@ -1,13 +1,19 @@
 # ============================================================
-# ingress-alb.yaml — AWS ALB Ingress for Multi-Tenant SaaS
+# ingress-alb.yaml — AWS ALB Ingress for EKS Auto Mode
 #
-# Prerequisites:
-#   1. AWS Load Balancer Controller installed in the EKS cluster
-#   2. An IAM OIDC provider associated with the cluster
-# Apply: kubectl apply -f kubernetes/ingress-alb.yaml
+# EKS Auto Mode automatically manages the AWS load balancer.
+# No AWS Load Balancer Controller installation is required.
+# No Helm installation is required.
 #
-# These three namespace-local Ingress resources share ONE Application
-# Load Balancer through the AWS Load Balancer Controller group feature.
+# Apply:
+#   kubectl apply -f kubernetes/ingress-alb.yaml
+#
+# Three namespace-local Ingress resources use the same
+# IngressClass and ALB group.
+# ============================================================
+
+# ============================================================
+# TENANT A
 # ============================================================
 
 apiVersion: networking.k8s.io/v1
@@ -18,44 +24,40 @@ metadata:
   labels:
     app: multi-tenant-saas
   annotations:
-    # ── ALB Controller ──────────────────────────────────────
-    kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/group.name: multi-tenant-saas
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
 
-    # ── HTTP ────────────────────────────────────────────────
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
 
-    # ── Health check ────────────────────────────────────────
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
     alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
-    alb.ingress.kubernetes.io/healthcheck-timeout-seconds:  "5"
-    alb.ingress.kubernetes.io/healthy-threshold-count:      "2"
-    alb.ingress.kubernetes.io/unhealthy-threshold-count:    "3"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
 
-    # ── Load balancer attributes ─────────────────────────────
     alb.ingress.kubernetes.io/load-balancer-attributes: >-
       idle_timeout.timeout_seconds=60,
       routing.http2.enabled=true,
       access_logs.s3.enabled=false
 
-    # ── Stickiness (optional) ────────────────────────────────
     alb.ingress.kubernetes.io/target-group-attributes: >-
-      stickiness.enabled=false,deregistration_delay.timeout_seconds=30
+      stickiness.enabled=false,
+      deregistration_delay.timeout_seconds=30
 
-    # ── Tags ─────────────────────────────────────────────────
     alb.ingress.kubernetes.io/tags: >-
       Environment=production,
       Project=multi-tenant-saas,
       ManagedBy=kubectl
 
 spec:
+  ingressClassName: alb
+
   rules:
     - http:
         paths:
 
-          # ── Tenant A — ABC Retail ─────────────────────────
+          # Tenant A
           - path: /tenant-a
             pathType: Prefix
             backend:
@@ -64,6 +66,7 @@ spec:
                 port:
                   number: 80
 
+          # Default route
           - path: /
             pathType: Prefix
             backend:
@@ -72,7 +75,12 @@ spec:
                 port:
                   number: 80
 
+
 ---
+# ============================================================
+# TENANT B
+# ============================================================
+
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -81,17 +89,27 @@ metadata:
   labels:
     app: multi-tenant-saas
   annotations:
-    kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/group.name: multi-tenant-saas
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
-    alb.ingress.kubernetes.io/tags: Environment=production,Project=multi-tenant-saas,ManagedBy=kubectl
+
+    alb.ingress.kubernetes.io/tags: >-
+      Environment=production,
+      Project=multi-tenant-saas,
+      ManagedBy=kubectl
+
 spec:
+  ingressClassName: alb
+
   rules:
     - http:
         paths:
+
+          # Tenant B
           - path: /tenant-b
             pathType: Prefix
             backend:
@@ -100,7 +118,12 @@ spec:
                 port:
                   number: 80
 
+
 ---
+# ============================================================
+# TENANT C
+# ============================================================
+
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -109,17 +132,27 @@ metadata:
   labels:
     app: multi-tenant-saas
   annotations:
-    kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/group.name: multi-tenant-saas
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
-    alb.ingress.kubernetes.io/tags: Environment=production,Project=multi-tenant-saas,ManagedBy=kubectl
+
+    alb.ingress.kubernetes.io/tags: >-
+      Environment=production,
+      Project=multi-tenant-saas,
+      ManagedBy=kubectl
+
 spec:
+  ingressClassName: alb
+
   rules:
     - http:
         paths:
+
+          # Tenant C
           - path: /tenant-c
             pathType: Prefix
             backend:
@@ -127,4 +160,3 @@ spec:
                 name: tenant-c-service
                 port:
                   number: 80
-
