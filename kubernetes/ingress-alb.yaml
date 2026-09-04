@@ -1,46 +1,25 @@
 # ============================================================
 # ingress-alb.yaml
-# AWS ALB for Amazon EKS Auto Mode
-#
-# EKS Auto Mode provides the ALB controller automatically.
-# No AWS Load Balancer Controller installation is required.
-# No Helm installation is required.
-#
-# This file creates:
-#
-#   1. IngressClassParams
-#   2. IngressClass
-#   3. Tenant A Ingress
-#   4. Tenant B Ingress
-#   5. Tenant C Ingress
-#
+# EKS Auto Mode
 # ============================================================
 
-
 # ============================================================
-# 1. INGRESS CLASS PARAMS
+# INGRESS CLASS PARAMS
 # ============================================================
 
 apiVersion: eks.amazonaws.com/v1
 kind: IngressClassParams
 metadata:
   name: alb
-spec:
 
-  # Internet-facing ALB
+spec:
   scheme: internet-facing
 
-  # All three tenant Ingress objects use the same ALB group.
-  # In Auto Mode, grouping is configured here instead of using
-  # alb.ingress.kubernetes.io/group.name.
+  targetType: ip
+
   group:
     name: multi-tenant-saas
 
-  # Use IP targets.
-  # ALB sends traffic directly to Pod IPs.
-  targetType: ip
-
-  # ALB attributes
   loadBalancerAttributes:
     - key: idle_timeout.timeout_seconds
       value: "60"
@@ -52,20 +31,16 @@ spec:
       value: "false"
 
 ---
-
 # ============================================================
-# 2. INGRESS CLASS
+# INGRESS CLASS
 # ============================================================
 
 apiVersion: networking.k8s.io/v1
 kind: IngressClass
-
 metadata:
   name: alb
 
 spec:
-
-  # AWS EKS Auto Mode built-in ALB controller
   controller: eks.amazonaws.com/alb
 
   parameters:
@@ -73,16 +48,13 @@ spec:
     kind: IngressClassParams
     name: alb
 
-
 ---
-
 # ============================================================
-# 3. TENANT A
+# TENANT A
 # ============================================================
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
-
 metadata:
   name: multi-tenant-saas-ingress
   namespace: tenant-a
@@ -91,65 +63,48 @@ metadata:
     app: multi-tenant-saas
 
   annotations:
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
 
-    # ALB health check
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
     alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
     alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
     alb.ingress.kubernetes.io/healthy-threshold-count: "2"
     alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
 
-    # Target group configuration
     alb.ingress.kubernetes.io/target-group-attributes: >-
       stickiness.enabled=false,
       deregistration_delay.timeout_seconds=30
 
 spec:
-
   ingressClassName: alb
 
   rules:
-
     - http:
-
         paths:
-
-          # --------------------------------------------------
-          # Tenant A
-          # --------------------------------------------------
 
           - path: /tenant-a
             pathType: Prefix
-
             backend:
               service:
                 name: tenant-a-service
                 port:
                   number: 80
-
-          # --------------------------------------------------
-          # Default route
-          # --------------------------------------------------
 
           - path: /
             pathType: Prefix
-
             backend:
               service:
                 name: tenant-a-service
                 port:
                   number: 80
 
-
 ---
-
 # ============================================================
-# 4. TENANT B
+# TENANT B
 # ============================================================
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
-
 metadata:
   name: multi-tenant-saas-ingress
   namespace: tenant-b
@@ -158,52 +113,40 @@ metadata:
     app: multi-tenant-saas
 
   annotations:
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
 
-    # ALB health check
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
     alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
     alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
     alb.ingress.kubernetes.io/healthy-threshold-count: "2"
     alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
 
-    # Target group configuration
     alb.ingress.kubernetes.io/target-group-attributes: >-
       stickiness.enabled=false,
       deregistration_delay.timeout_seconds=30
 
 spec:
-
   ingressClassName: alb
 
   rules:
-
     - http:
-
         paths:
-
-          # --------------------------------------------------
-          # Tenant B
-          # --------------------------------------------------
 
           - path: /tenant-b
             pathType: Prefix
-
             backend:
               service:
                 name: tenant-b-service
                 port:
                   number: 80
 
-
 ---
-
 # ============================================================
-# 5. TENANT C
+# TENANT C
 # ============================================================
 
 apiVersion: networking.k8s.io/v1
 kind: Ingress
-
 metadata:
   name: multi-tenant-saas-ingress
   namespace: tenant-c
@@ -212,36 +155,27 @@ metadata:
     app: multi-tenant-saas
 
   annotations:
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
 
-    # ALB health check
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
     alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
     alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
     alb.ingress.kubernetes.io/healthy-threshold-count: "2"
     alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
 
-    # Target group configuration
     alb.ingress.kubernetes.io/target-group-attributes: >-
       stickiness.enabled=false,
       deregistration_delay.timeout_seconds=30
 
 spec:
-
   ingressClassName: alb
 
   rules:
-
     - http:
-
         paths:
-
-          # --------------------------------------------------
-          # Tenant C
-          # --------------------------------------------------
 
           - path: /tenant-c
             pathType: Prefix
-
             backend:
               service:
                 name: tenant-c-service
