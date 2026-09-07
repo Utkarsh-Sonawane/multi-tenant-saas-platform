@@ -49,6 +49,91 @@ _tenant_engines: dict[str, Any] = {}
 _tenant_configs: dict[str, dict] = {}
 _cache_lock = Lock()
 
+DEFAULT_TENANT_CONFIGS: list[dict[str, Any]] = [
+    {
+        "tenant_id": "tenant-a",
+        "tenant_name": "Tenant A",
+        "company_name": "ABC Retail",
+        "theme_color": "#0d6efd",
+        "company_logo": "/static/logos/abc_retail.png",
+        "db_host": Config.TENANT_DB_HOST,
+        "db_port": Config.TENANT_DB_PORT,
+        "db_name": "tenant_a_db",
+        "db_username": Config.TENANT_DB_USER,
+        "namespace": "tenant-a",
+        "service_name": "tenant-a-service",
+        "ingress_path": "/tenant-a",
+        "status": "active",
+        "modules_enabled": ["Products", "Orders", "Customers"],
+    },
+    {
+        "tenant_id": "tenant-b",
+        "tenant_name": "Tenant B",
+        "company_name": "XYZ Hospital",
+        "theme_color": "#198754",
+        "company_logo": "/static/logos/xyz_hospital.png",
+        "db_host": Config.TENANT_DB_HOST,
+        "db_port": Config.TENANT_DB_PORT,
+        "db_name": "tenant_b_db",
+        "db_username": Config.TENANT_DB_USER,
+        "namespace": "tenant-b",
+        "service_name": "tenant-b-service",
+        "ingress_path": "/tenant-b",
+        "status": "active",
+        "modules_enabled": ["Patients", "Doctors", "Appointments"],
+    },
+    {
+        "tenant_id": "tenant-c",
+        "tenant_name": "Tenant C",
+        "company_name": "PQR School",
+        "theme_color": "#fd7e14",
+        "company_logo": "/static/logos/pqr_school.png",
+        "db_host": Config.TENANT_DB_HOST,
+        "db_port": Config.TENANT_DB_PORT,
+        "db_name": "tenant_c_db",
+        "db_username": Config.TENANT_DB_USER,
+        "namespace": "tenant-c",
+        "service_name": "tenant-c-service",
+        "ingress_path": "/tenant-c",
+        "status": "active",
+        "modules_enabled": ["Students", "Teachers", "Attendance"],
+    },
+]
+
+
+def _fallback_tenant_config(tenant_id: str) -> dict | None:
+    for tenant in DEFAULT_TENANT_CONFIGS:
+        if tenant["tenant_id"] == tenant_id:
+            return dict(tenant)
+    return None
+
+
+def get_active_tenant_configs() -> list[dict]:
+    """Return active tenant configs from config_db or a static demo fallback."""
+    try:
+        session = ConfigSession()
+        try:
+            rows = session.execute(
+                text(
+                    "SELECT tenant_id, tenant_name, company_name, theme_color, "
+                    "company_logo, db_host, db_port, db_name, db_username, "
+                    "namespace, service_name, ingress_path, status, modules_enabled "
+                    "FROM tenant_config WHERE status = 'active' ORDER BY id"
+                )
+            ).mappings().fetchall()
+            tenants = [dict(r) for r in rows]
+        finally:
+            session.close()
+
+        if tenants:
+            return tenants
+    except Exception as exc:
+        log.error("Failed to load active tenant configs", exc_info=exc)
+
+    for tenant in DEFAULT_TENANT_CONFIGS:
+        _tenant_configs[tenant["tenant_id"]] = dict(tenant)
+    return [dict(tenant) for tenant in DEFAULT_TENANT_CONFIGS]
+
 
 def get_tenant_config(tenant_id: str) -> dict | None:
     """
@@ -79,6 +164,14 @@ def get_tenant_config(tenant_id: str) -> dict | None:
         prom.record_db_query(tenant_id, "config_lookup", duration)
 
         if not row:
+            fallback = _fallback_tenant_config(tenant_id)
+            if fallback:
+                with _cache_lock:
+                    _tenant_configs[tenant_id] = dict(fallback)
+                prom.mark_tenant_active(tenant_id, fallback["company_name"], True)
+                prom.TENANT_CONFIG_LOADS.labels(tenant_id=tenant_id, result="miss").inc()
+                return dict(fallback)
+
             log.warning(
                 "Tenant not found or inactive",
                 extra={"tenant_id": tenant_id},
@@ -95,6 +188,14 @@ def get_tenant_config(tenant_id: str) -> dict | None:
         return cfg
 
     except Exception as exc:
+        fallback = _fallback_tenant_config(tenant_id)
+        if fallback:
+            with _cache_lock:
+                _tenant_configs[tenant_id] = dict(fallback)
+            prom.mark_tenant_active(tenant_id, fallback["company_name"], True)
+            prom.TENANT_CONFIG_LOADS.labels(tenant_id=tenant_id, result="error").inc()
+            return dict(fallback)
+
         log.error(
             "Failed to load tenant config",
             extra={"tenant_id": tenant_id},

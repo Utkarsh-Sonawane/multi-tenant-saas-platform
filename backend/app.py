@@ -128,22 +128,7 @@ def index():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    # Fetch all active tenants for the switcher dropdown
-    from sqlalchemy import text as sqlt
-    from db_manager import ConfigSession
-    tenants = []
-    try:
-        sess = ConfigSession()
-        try:
-            rows = sess.execute(
-                sqlt("SELECT tenant_id, company_name, theme_color "
-                     "FROM tenant_config WHERE status='active' ORDER BY id")
-            ).mappings().fetchall()
-            tenants = [dict(r) for r in rows]
-        finally:
-            sess.close()
-    except Exception:
-        pass
+    tenants = db.get_active_tenant_configs()
 
     if request.method == "POST":
         tenant_id = request.form.get("tenant_id", "").strip()
