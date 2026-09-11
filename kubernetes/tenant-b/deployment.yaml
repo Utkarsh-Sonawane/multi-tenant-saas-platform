@@ -37,7 +37,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: saas-app
-          image: 096563427919.dkr.ecr.ap-south-1.amazonaws.com/multi-tenant-app:08b6bd6c61ed686004aa5d88298f2f553f8dd878
+          image: 096563427919.dkr.ecr.ap-south-1.amazonaws.com/multi-tenant-app:0ab218f3b47902e67c8f7b5371e6b98033ecdfec
           imagePullPolicy: Always
           ports:
             - name: http
