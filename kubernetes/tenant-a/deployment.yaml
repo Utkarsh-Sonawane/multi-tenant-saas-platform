@@ -50,7 +50,7 @@ spec:
       containers:
         - name: saas-app
           # Replace with your actual ECR image URI
-          image: 096563427919.dkr.ecr.ap-south-1.amazonaws.com/multi-tenant-app:0ab218f3b47902e67c8f7b5371e6b98033ecdfec
+          image: 096563427919.dkr.ecr.ap-south-1.amazonaws.com/multi-tenant-app:ee4ef1474ebd10da42a2912843c2e6182a1e4075
           imagePullPolicy: Always
           ports:
             - name: http
