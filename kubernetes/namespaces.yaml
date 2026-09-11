@@ -32,3 +32,12 @@ metadata:
     platform: multi-tenant-saas
     tenant: tenant-c
     environment: production
+ 
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+  labels:
+    app.kubernetes.io/managed-by: kubectl
+    platform: multi-tenant-saas
+    environment: production

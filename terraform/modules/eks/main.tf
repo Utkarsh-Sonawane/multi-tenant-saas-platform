@@ -131,3 +131,4 @@ resource "aws_eks_access_policy_association" "admin_user_policy" {
     type = "cluster"
   }
 }
+

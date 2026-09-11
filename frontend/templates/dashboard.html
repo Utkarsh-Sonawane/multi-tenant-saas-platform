@@ -302,7 +302,7 @@
             </div>
             <div class="mt-2">
               <div class="progress" style="height:3px">
-                <div class="progress-bar" style="width:{{ [count * 10, 100]|min }}%;background:var(--tenant-primary)"></div>
+                <div class="progress-bar" data-progress-width="{{ [count * 10, 100]|min }}" style="background:var(--tenant-primary)"></div>
               </div>
             </div>
           </a>
@@ -418,13 +418,14 @@
 </div><!-- /.saas-layout -->
 
 {% block extra_scripts %}
+<script type="application/json" id="tenant-context">
+  {{ {'id': tenant_id, 'color': tenant.theme_color, 'modules': modules} | tojson }}
+</script>
 <script>
-  // Inject tenant context for JS modules
-  window.TENANT = {
-    id:      "{{ tenant_id }}",
-    color:   "{{ tenant.theme_color }}",
-    modules: {{ modules | tojson }},
-  };
+  window.TENANT = JSON.parse(document.getElementById('tenant-context').textContent);
+  document.querySelectorAll('[data-progress-width]').forEach((bar) => {
+    bar.style.width = `${bar.dataset.progressWidth}%`;
+  });
 </script>
 {% endblock %}
 {% endblock %}

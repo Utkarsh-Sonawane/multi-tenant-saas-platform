@@ -8,7 +8,7 @@ on:
       - 'backend/**'
       - 'frontend/**'
       - 'docker/**'
-      - 'kubernetes/**'
+      # - 'kubernetes/**' 
       - '.github/workflows/deploy-eks-app.yml'
 
   workflow_dispatch:
@@ -28,7 +28,7 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 jobs:
   deploy:
@@ -101,79 +101,28 @@ jobs:
           docker tag "${IMAGE}" "${LATEST}"
           docker push "${LATEST}"
 
-      - name: Update kubeconfig for EKS
-        shell: bash
+      - name: Update deployment manifests in Git
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          set -euo pipefail
-          aws eks update-kubeconfig --name "${CLUSTER_NAME}" --region "${AWS_REGION}"
-
-      - name: Validate Kubernetes manifests
-        shell: bash
-        run: |
-          set -euo pipefail
-          kubectl apply --dry-run=client -f kubernetes/namespaces.yaml
-          kubectl apply --dry-run=client -f kubernetes/tenant-a/
-          kubectl apply --dry-run=client -f kubernetes/tenant-b/
-          kubectl apply --dry-run=client -f kubernetes/tenant-c/
-          kubectl apply --dry-run=client -f kubernetes/ingress-alb.yaml
-
-      - name: Deploy Kubernetes manifests
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          test -n "${APP_SECRET_KEY}" || { echo "APP_SECRET_KEY repository secret is required"; exit 1; }
-
-          kubectl apply -f kubernetes/namespaces.yaml
+          # Update the image line in each tenant's deployment manifest
+          NEW_IMAGE="${ECR_URL}:${IMAGE_TAG}"
 
           for TENANT in tenant-a tenant-b tenant-c; do
-            kubectl create configmap "${TENANT}-config" \
-              --namespace "${TENANT}" \
-              --from-literal=CONFIG_DB_HOST="${RDS_ENDPOINT}" \
-              --from-literal=CONFIG_DB_PORT=5432 \
-              --from-literal=CONFIG_DB_NAME=config_db \
-              --from-literal=CONFIG_DB_USER=postgres \
-              --from-literal=DB_HOST="${RDS_ENDPOINT}" \
-              --from-literal=DB_PORT=5432 \
-              --from-literal=ENVIRONMENT="${ENVIRONMENT}" \
-              --from-literal=AWS_REGION="${AWS_REGION}" \
-              --from-literal=K8S_NAMESPACE="${TENANT}" \
-              --from-literal=PORT=5000 \
-              --from-literal=WORKERS=4 \
-              --from-literal=WORKER_CLASS=gthread \
-              --from-literal=THREADS=2 \
-              --from-literal=TIMEOUT=120 \
-              --from-literal=FLASK_DEBUG=false \
-              --dry-run=client -o yaml | kubectl apply -f -
-
-            TENANT_USER="${TENANT//-/_}_user"
-            kubectl create secret generic "${TENANT}-secrets" \
-              --namespace "${TENANT}" \
-              --from-literal=CONFIG_DB_PASSWORD="${RDS_PASSWORD}" \
-              --from-literal=DB_PASSWORD="${RDS_PASSWORD}" \
-              --from-literal=DB_USER="${TENANT_USER}" \
-              --from-literal=SECRET_KEY="${APP_SECRET_KEY}" \
-              --dry-run=client -o yaml | kubectl apply -f -
+            sed -i "s|image: .*|image: ${NEW_IMAGE}|g" kubernetes/${TENANT}/deployment.yaml
+            sed -i "s|CONFIG_DB_HOST: .*|CONFIG_DB_HOST: \"${RDS_ENDPOINT}\"|g" kubernetes/${TENANT}/configmap.yaml
+            sed -i "s|DB_HOST: .*|DB_HOST: \"${RDS_ENDPOINT}\"|g" kubernetes/${TENANT}/configmap.yaml
           done
 
-          kubectl apply -f kubernetes/tenant-a/deployment.yaml -f kubernetes/tenant-a/service.yaml
-          kubectl apply -f kubernetes/tenant-b/deployment.yaml -f kubernetes/tenant-b/service.yaml
-          kubectl apply -f kubernetes/tenant-c/deployment.yaml -f kubernetes/tenant-c/service.yaml
+          # Commit and push back to main branch
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add kubernetes/
 
-          for TENANT in tenant-a tenant-b tenant-c; do
-            kubectl -n "${TENANT}" set image deployment/"${TENANT}-app" \
-              saas-app="${ECR_URL}:${IMAGE_TAG}"
-          done
-
-          kubectl apply -f kubernetes/ingress-alb.yaml
-
-          for TENANT in tenant-a tenant-b tenant-c; do
-            kubectl rollout status deployment/"${TENANT}-app" -n "${TENANT}" --timeout=180s
-          done
-
-      - name: Verify deployment status
-        shell: bash
-        run: |
-          set -euo pipefail
-          kubectl get pods -A -l app=multi-tenant-saas
-          kubectl get svc,ingress -A -l app=multi-tenant-saas
+          # Only commit and push if there are actual diffs
+          if ! git diff-index --quiet HEAD; then
+            git commit -m "ci: update tenant image tag to ${IMAGE_TAG} [skip ci]"
+            git push
+          else
+            echo "No manifest changes detected."
+          fi

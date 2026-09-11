@@ -63,6 +63,7 @@ metadata:
     app: multi-tenant-saas
 
   annotations:
+    alb.ingress.kubernetes.io/group.name: multi-tenant-saas
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
 
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
@@ -113,6 +114,7 @@ metadata:
     app: multi-tenant-saas
 
   annotations:
+    alb.ingress.kubernetes.io/group.name: multi-tenant-saas
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
 
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
@@ -155,6 +157,7 @@ metadata:
     app: multi-tenant-saas
 
   annotations:
+    alb.ingress.kubernetes.io/group.name: multi-tenant-saas
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
 
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
