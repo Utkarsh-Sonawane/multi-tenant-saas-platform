@@ -100,14 +100,35 @@ jobs:
           docker push "${IMAGE}"
           docker tag "${IMAGE}" "${LATEST}"
           docker push "${LATEST}"
+      - name: Connect to EKS Cluster
+        run: aws eks update-kubeconfig --name "${CLUSTER_NAME}" --region "${AWS_REGION}"
 
+      - name: Inject Secrets directly into EKS
+        env:
+          APP_SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+          
+          for TENANT in tenant-a tenant-b tenant-c; do
+            # Dynamically create the DB_USER just like your old setup
+            TENANT_USER="${TENANT//-/_}_user"
+
+            # Force create/update the secret in the cluster
+            kubectl create secret generic "${TENANT}-secrets" \
+              --namespace "${TENANT}" \
+              --from-literal=CONFIG_DB_PASSWORD="${RDS_PASSWORD}" \
+              --from-literal=DB_PASSWORD="${RDS_PASSWORD}" \
+              --from-literal=DB_USER="${TENANT_USER}" \
+              --from-literal=SECRET_KEY="${APP_SECRET_KEY}" \
+              --dry-run=client -o yaml | kubectl apply -f -
+          done
+          
       - name: Update deployment manifests in Git
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           # Update the image line in each tenant's deployment manifest
           NEW_IMAGE="${ECR_URL}:${IMAGE_TAG}"
-
           for TENANT in tenant-a tenant-b tenant-c; do
             sed -i "s|image: .*|image: ${NEW_IMAGE}|g" kubernetes/${TENANT}/deployment.yaml
             sed -i "s|CONFIG_DB_HOST: .*|CONFIG_DB_HOST: \"${RDS_ENDPOINT}\"|g" kubernetes/${TENANT}/configmap.yaml
