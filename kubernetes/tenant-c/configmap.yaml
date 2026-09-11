@@ -7,11 +7,11 @@ metadata:
     app: multi-tenant-saas
     tenant: tenant-c
 data:
-  CONFIG_DB_HOST: "your-rds-endpoint.ap-south-1.rds.amazonaws.com"
+  CONFIG_DB_HOST: "multi-tenant-postgres.cli04yqskkd6.ap-south-1.rds.amazonaws.com"
   CONFIG_DB_PORT: "5432"
   CONFIG_DB_NAME: "config_db"
   CONFIG_DB_USER: "postgres"
-  DB_HOST:        "your-rds-endpoint.ap-south-1.rds.amazonaws.com"
+  DB_HOST: "multi-tenant-postgres.cli04yqskkd6.ap-south-1.rds.amazonaws.com"
   DB_PORT:        "5432"
   ENVIRONMENT:    "production"
   AWS_REGION:     "ap-south-1"
