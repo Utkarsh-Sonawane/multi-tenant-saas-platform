@@ -8,7 +8,7 @@ on:
       - 'backend/**'
       - 'frontend/**'
       - 'docker/**'
-      # - 'kubernetes/**' 
+      - 'kubernetes/**'
       - '.github/workflows/deploy-eks-app.yml'
 
   workflow_dispatch:
@@ -43,17 +43,26 @@ jobs:
       APP_SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
 
     steps:
+
+      # --------------------------------------------------
+      # 1. Checkout repository
+      # --------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # --------------------------------------------------
+      # 2. Configure AWS credentials
+      # --------------------------------------------------
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # --------------------------------------------------
+      # 3. Read configuration from SSM
+      # --------------------------------------------------
       - name: Read application configuration from AWS SSM Parameter Store
-        id: ssm
         shell: bash
         run: |
           set -euo pipefail
@@ -81,13 +90,23 @@ jobs:
             echo "RDS_PASSWORD=${RDS_PASSWORD}"
           } >> "$GITHUB_ENV"
 
+      # --------------------------------------------------
+      # 4. Login to ECR
+      # --------------------------------------------------
       - name: Authenticate Docker to Amazon ECR
         shell: bash
         run: |
           set -euo pipefail
-          aws ecr get-login-password --region "${AWS_REGION}" \
-            | docker login --username AWS --password-stdin "${ECR_URL}"
 
+          aws ecr get-login-password \
+            --region "${AWS_REGION}" \
+            | docker login \
+              --username AWS \
+              --password-stdin "${ECR_URL}"
+
+      # --------------------------------------------------
+      # 5. Build and push Docker image
+      # --------------------------------------------------
       - name: Build and push application image
         shell: bash
         run: |
@@ -96,54 +115,121 @@ jobs:
           IMAGE="${ECR_URL}:${IMAGE_TAG}"
           LATEST="${ECR_URL}:latest"
 
-          docker build -f docker/Dockerfile -t "${IMAGE}" .
+          docker build \
+            -f docker/Dockerfile \
+            -t "${IMAGE}" \
+            .
+
           docker push "${IMAGE}"
+
           docker tag "${IMAGE}" "${LATEST}"
           docker push "${LATEST}"
-      - name: Connect to EKS Cluster
-        run: aws eks update-kubeconfig --name "${CLUSTER_NAME}" --region "${AWS_REGION}"
 
+      # --------------------------------------------------
+      # 6. Connect to EKS
+      # --------------------------------------------------
+      - name: Connect to EKS Cluster
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aws eks update-kubeconfig \
+            --name "${CLUSTER_NAME}" \
+            --region "${AWS_REGION}"
+
+          kubectl get nodes
+
+      # --------------------------------------------------
+      # 7. Create tenant namespaces
+      # --------------------------------------------------
+      - name: Create tenant namespaces
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for TENANT in tenant-a tenant-b tenant-c; do
+
+            kubectl create namespace "${TENANT}" \
+              --dry-run=client \
+              -o yaml | kubectl apply -f -
+
+          done
+
+          echo "Tenant namespaces created successfully."
+
+      # --------------------------------------------------
+      # 8. Create/update tenant secrets
+      # --------------------------------------------------
       - name: Inject Secrets directly into EKS
         env:
           APP_SECRET_KEY: ${{ secrets.APP_SECRET_KEY }}
+        shell: bash
         run: |
           set -euo pipefail
-          
-          for TENANT in tenant-a tenant-b tenant-c; do
-            # Dynamically create the DB_USER just like your old setup
-            TENANT_USER="${TENANT//-/_}_user"
 
-            # Force create/update the secret in the cluster
+          for TENANT in tenant-a tenant-b tenant-c; do
+
             kubectl create secret generic "${TENANT}-secrets" \
               --namespace "${TENANT}" \
               --from-literal=CONFIG_DB_PASSWORD="${RDS_PASSWORD}" \
               --from-literal=DB_PASSWORD="${RDS_PASSWORD}" \
-              --from-literal=DB_USER="${TENANT_USER}" \
+              --from-literal=DB_USER="postgres" \
               --from-literal=SECRET_KEY="${APP_SECRET_KEY}" \
-              --dry-run=client -o yaml | kubectl apply -f -
-          done
-          
-      - name: Update deployment manifests in Git
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        run: |
-          # Update the image line in each tenant's deployment manifest
-          NEW_IMAGE="${ECR_URL}:${IMAGE_TAG}"
-          for TENANT in tenant-a tenant-b tenant-c; do
-            sed -i "s|image: .*|image: ${NEW_IMAGE}|g" kubernetes/${TENANT}/deployment.yaml
-            sed -i "s|CONFIG_DB_HOST: .*|CONFIG_DB_HOST: \"${RDS_ENDPOINT}\"|g" kubernetes/${TENANT}/configmap.yaml
-            sed -i "s|DB_HOST: .*|DB_HOST: \"${RDS_ENDPOINT}\"|g" kubernetes/${TENANT}/configmap.yaml
+              --dry-run=client \
+              -o yaml | kubectl apply -f -
+
           done
 
-          # Commit and push back to main branch
+          echo "Tenant secrets created/updated successfully."
+
+      # --------------------------------------------------
+      # 9. Update Kubernetes manifests
+      # --------------------------------------------------
+      - name: Update deployment manifests in Git
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          NEW_IMAGE="${ECR_URL}:${IMAGE_TAG}"
+
+          for TENANT in tenant-a tenant-b tenant-c; do
+
+            sed -i \
+              "s|image: .*|image: ${NEW_IMAGE}|g" \
+              "kubernetes/${TENANT}/deployment.yaml"
+
+            sed -i \
+              "s|CONFIG_DB_HOST: .*|CONFIG_DB_HOST: \"${RDS_ENDPOINT}\"|g" \
+              "kubernetes/${TENANT}/configmap.yaml"
+
+            sed -i \
+              "s|DB_HOST: .*|DB_HOST: \"${RDS_ENDPOINT}\"|g" \
+              "kubernetes/${TENANT}/configmap.yaml"
+
+          done
+
+      # --------------------------------------------------
+      # 10. Commit manifest changes
+      # --------------------------------------------------
+      - name: Commit and push Kubernetes manifest changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
           git add kubernetes/
 
-          # Only commit and push if there are actual diffs
           if ! git diff-index --quiet HEAD; then
-            git commit -m "ci: update tenant image tag to ${IMAGE_TAG} [skip ci]"
+
+            git commit \
+              -m "ci: update tenant image tag to ${IMAGE_TAG} [skip ci]"
+
             git push
+
           else
+
             echo "No manifest changes detected."
+
           fi
